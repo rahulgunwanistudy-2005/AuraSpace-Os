@@ -27,7 +27,14 @@ export default function CommandDeckHUD() {
   const Pc = engineState?.Pc || 0;
   const confidence = engineState?.confidence || 0;
   const isThinking = orbState === 'THINKING' || orbState === 'SIMULATING';
-
+  const aiResponse = useStore((s) => s.aiResponse);
+  const reasoningSteps = aiResponse?.reasoning_steps || [
+    'Analyzing relative motion...',
+    'Evaluating collision geometry...',
+    'Computing maneuver candidates...',
+    'Estimating fuel cost...',
+    'Selecting optimal strategy...'
+  ];
   // Format Time to TCA
   const hoursToTca = Math.abs(timeOffset);
   const timeString = timeOffset <= 0 ? `-${Math.floor(hoursToTca)}h ${Math.floor((hoursToTca % 1) * 60)}m` : `+${Math.floor(hoursToTca)}h`;
@@ -274,7 +281,7 @@ export default function CommandDeckHUD() {
 
         {/* Decision Arena */}
         <div className="bg-[#050b14]/60 backdrop-blur-xl border border-white/5 rounded-xl p-4 flex flex-col shadow-2xl h-[240px]">
-          <DecisionArena scenario={scenario} selectedStrategy={selectedStrategy} onSelectStrategy={setSelectedStrategy} />
+          <DecisionArena scenario={scenario} selectedStrategy={selectedStrategy} onSelectStrategy={setSelectedStrategy} aiResponse={aiResponse} />
         </div>
 
         {/* AI Reasoning */}
@@ -282,36 +289,23 @@ export default function CommandDeckHUD() {
           <span className="text-[9px] font-mono text-white/30 mb-4">AI REASONING</span>
           
           <div className="flex flex-col gap-3">
-            {[
-              { id: 1, text: 'Analyzing relative motion...' },
-              { id: 2, text: 'Evaluating collision geometry...' },
-              { id: 3, text: 'Computing maneuver candidates...' },
-              { id: 4, text: 'Estimating fuel cost...' },
-              { id: 5, text: 'Selecting optimal strategy...' },
-            ].map((step, idx) => {
+            {reasoningSteps.map((stepText, idx) => {
               const isActive = isThinking && (idx === 0 || orbState === 'SIMULATING'); // Simplified active logic
               const isDone = !isThinking && selectedStrategy;
               const color = isDone ? 'text-neon-green' : (isActive ? 'text-neon-blue' : 'text-white/20');
               const Icon = isDone ? CheckCircle2 : Circle;
               
               return (
-                <div key={step.id} className="flex items-center gap-3">
-                  <Icon className={`w-3.5 h-3.5 ${color} ${isActive ? 'animate-pulse' : ''}`} />
-                  <span className={`text-[10px] font-mono ${isActive ? 'text-white/80' : 'text-white/40'}`}>
-                    {step.text}
+                <div key={idx} className="flex items-start gap-3">
+                  <Icon className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${color} ${isActive ? 'animate-pulse' : ''}`} />
+                  <span className={`text-[10px] font-mono leading-tight ${isActive ? 'text-white/80' : 'text-white/40'}`}>
+                    {stepText}
                   </span>
                 </div>
               );
             })}
           </div>
-          
-          {selectedStrategy && !isThinking && (
-            <div className="mt-auto h-1 w-full bg-white/10 rounded-full overflow-hidden">
-              <div className="h-full bg-neon-blue w-[100%]" />
-            </div>
-          )}
         </div>
-
       </div>
     </div>
   );
