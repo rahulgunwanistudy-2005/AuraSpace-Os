@@ -1,6 +1,3 @@
 {
-  "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/main.py" },
-    { "source": "/(.*)", "destination": "/index.html" }
-  ]
+  "name": "auraspace-os"
 }

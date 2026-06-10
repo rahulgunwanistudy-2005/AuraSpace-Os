@@ -108,48 +108,33 @@ export const useStore = create((set, get) => ({
   },
 
   // ═══ COPILOT ACTIVATION SEQUENCE ═══
-  activateCopilot: async () => {
+  activateCopilot: () => {
     const { scenario, setOrbState, setShowSimChamber, setShowCinematicReveal, setSelectedStrategy } = get();
     
     // Phase 1: UI dims, Orb ignites
     setOrbState('THINKING');
-    set({ immersiveMode: true, leftPanelOpen: false, rightPanelOpen: false, aiResponse: null });
+    set({ immersiveMode: true, leftPanelOpen: false, rightPanelOpen: false });
     
-    try {
-      // Trigger Python LLM Backend
-      const res = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ scenario: { name: scenario.name, basePc: scenario.basePc, tier: scenario.tier } })
-      });
-      const data = await res.json();
-      set({ aiResponse: data });
-      
-      // Phase 2: Simulation chamber
+    // Phase 2: Simulation chamber
+    setTimeout(() => {
       setOrbState('SIMULATING');
       setShowSimChamber(true);
+    }, 2000);
+    
+    // Phase 3: Decision reveal
+    setTimeout(() => {
+      setShowSimChamber(false);
+      setOrbState('DECISION');
+      setShowCinematicReveal(true);
       
-      // Wait a moment for visual effect
-      setTimeout(() => {
-        setShowSimChamber(false);
-        setOrbState('DECISION');
-        setShowCinematicReveal(true);
-        
-        // Auto-select the 'Best' strategy from the LLM
-        const best = data.strategies.find(s => s.recommendation === 'Best') || data.strategies[1];
-        if (best) setSelectedStrategy(best);
-        
-        // Return to normal UI
-        setTimeout(() => {
-          setShowCinematicReveal(false);
-          set({ immersiveMode: false, rightPanelOpen: true });
-        }, 6000);
-      }, 3000);
-
-    } catch (error) {
-      console.error("AI Analysis Failed:", error);
-      // Fallback
-      setOrbState('IDLE');
-    }
+      const best = scenario.strategies.find(s => s.recommendation === 'Best');
+      setSelectedStrategy(best || scenario.strategies[0]);
+    }, 6000);
+    
+    // Phase 4: Return to command deck
+    setTimeout(() => {
+      setShowCinematicReveal(false);
+      set({ immersiveMode: false, leftPanelOpen: true, rightPanelOpen: true });
+    }, 10000);
   },
 }));

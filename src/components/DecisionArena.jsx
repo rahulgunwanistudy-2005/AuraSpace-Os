@@ -1,27 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, ShieldAlert, CheckCircle2, XCircle } from 'lucide-react';
 
-export default function DecisionArena({ scenario, selectedStrategy, onSelectStrategy, aiResponse }) {
+export default function DecisionArena({ scenario, selectedStrategy, onSelectStrategy }) {
   const [evaluating, setEvaluating] = useState(true);
   
-  // Use AI strategies if available, else fallback to mock scenario strategies
-  const strategies = aiResponse?.strategies || scenario.strategies;
-
-  // Simulate AI evaluation time or rely on aiResponse
+  // Simulate AI evaluation time
   useEffect(() => {
-    if (aiResponse) {
-      setEvaluating(false);
-      return;
-    }
     setEvaluating(true);
     const t = setTimeout(() => {
       setEvaluating(false);
       // Auto-select best strategy when done
-      const best = strategies.find(s => s.recommendation === 'Best');
+      const best = scenario.strategies.find(s => s.recommendation === 'Best');
       if (best && onSelectStrategy) onSelectStrategy(best);
     }, 2500);
     return () => clearTimeout(t);
-  }, [scenario.id, onSelectStrategy, aiResponse]);
+  }, [scenario.id, onSelectStrategy]);
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
@@ -33,7 +26,7 @@ export default function DecisionArena({ scenario, selectedStrategy, onSelectStra
       </div>
 
       <div className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-3 pr-2 scrollbar-hide pb-4">
-        {strategies.map((strat, idx) => {
+        {scenario.strategies.map((strat, idx) => {
           if (strat.id === 'no-action') return null; // Only evaluate active burns
           
           const isSelected = selectedStrategy?.id === strat.id;

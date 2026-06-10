@@ -56,7 +56,6 @@ export default function Globe3D({ scenario }) {
         : new THREE.Vector3(-10, 5, 10).normalize();
       
       customMaterialRef.current.userData.shader.uniforms.sunDirection.value.lerp(targetSunDir, delta * 2);
-      customMaterialRef.current.userData.shader.uniforms.viewVector.value.copy(state.camera.position).normalize();
       customMaterialRef.current.userData.shader.uniforms.time.value = state.clock.elapsedTime;
     }
     
@@ -106,7 +105,6 @@ export default function Globe3D({ scenario }) {
             shader.uniforms.tSpecular = { value: specularMap };
             shader.uniforms.tClouds = { value: cloudsMap };
             shader.uniforms.sunDirection = { value: new THREE.Vector3(-10, 5, 10).normalize() };
-            shader.uniforms.viewVector = { value: new THREE.Vector3(0, 0, 1) };
             shader.uniforms.time = { value: 0 };
             customMaterialRef.current.userData.shader = shader;
             
@@ -115,7 +113,6 @@ export default function Globe3D({ scenario }) {
               uniform sampler2D tSpecular;
               uniform sampler2D tClouds;
               uniform vec3 sunDirection;
-              uniform vec3 viewVector;
               uniform float time;
               
               // Simplex noise for Aurora
@@ -176,6 +173,7 @@ export default function Globe3D({ scenario }) {
               #include <emissivemap_fragment>
               // Correctly transform sun direction to view space for accurate lighting math
               vec3 viewSunDir = normalize((viewMatrix * vec4(sunDirection, 0.0)).xyz);
+              vec3 viewVector = normalize(vViewPosition);
               float intensity = dot(vNormal, viewSunDir);
               
               // 3-Stage Twilight Terminator
@@ -265,7 +263,9 @@ export default function Globe3D({ scenario }) {
               float lightDot = dot(vNormal, viewSunDir);
               float cloudShadow = smoothstep(-0.1, 0.3, lightDot);
               vec3 finalCloudLight = outgoingLight * (0.1 + 0.9 * cloudShadow);
-              gl_FragColor = vec4(finalCloudLight, diffuseColor.a);
+              // Fade alpha entirely on the dark side
+              float cloudAlpha = diffuseColor.a * smoothstep(-0.2, 0.1, lightDot);
+              gl_FragColor = vec4(finalCloudLight, cloudAlpha);
               `
             );
           }}
@@ -303,8 +303,9 @@ export default function Globe3D({ scenario }) {
               
               // Illuminate atmosphere softly on day side, with subtle scatter into dusk
               vec3 viewSunDir = normalize((viewMatrix * vec4(sunDirection, 0.0)).xyz);
-              float dayIntensity = max(0.0, dot(vNormal, viewSunDir));
-              float dayMix = smoothstep(-0.2, 0.5, dayIntensity);
+              float lightDot = dot(vNormal, viewSunDir);
+              // Fade out entirely on the night side to prevent neon glowing shell
+              float dayMix = smoothstep(-0.25, 0.1, lightDot);
               
               vec3 atmColor = vec3(0.05, 0.45, 1.0); // NASA blue
               gl_FragColor = vec4(atmColor, fresnel * dayMix * 1.2);
