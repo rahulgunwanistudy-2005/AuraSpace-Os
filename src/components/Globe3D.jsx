@@ -6,6 +6,7 @@ import { propagateTLE } from '../orbital/sgp4';
 import { Engine } from '../orbital/OrbitalEngine';
 import AuraSatellite from './AuraSatellite';
 import DebrisObject from './DebrisObject';
+import { EnergyRibbon, ConjunctionBubble, CollisionCorridor, ConnectionLines, TCAMarker } from './ElioVisuals';
 
 function generateOrbitPath(tle1, tle2, hours, steps) {
   const points = [];
@@ -32,6 +33,7 @@ export default function Globe3D({ scenario }) {
   const judgeModeStep = useStore(s => s.judgeModeStep);
   const lightingMode = useStore(s => s.lightingMode);
   const engineState = useStore(s => s.engineState);
+  const targetMissDistance = useStore(s => s.targetMissDistance);
 
   const [colorMap, normalMap, specularMap, cloudsMap, nightMap] = useTexture([
     '/textures/earth_diffuse.jpg',
@@ -79,10 +81,88 @@ export default function Globe3D({ scenario }) {
   const orbit1 = React.useMemo(() => generateOrbitPath(scenario.tlePrimary[0], scenario.tlePrimary[1], 2, 200), [scenario]);
   const orbit2 = React.useMemo(() => generateOrbitPath(scenario.tleChaser[0], scenario.tleChaser[1], 2, 200), [scenario]);
 
-  const baseState1 = Engine.baseState1;
-  const baseState2 = Engine.baseState2;
+  const timeOffset = useStore(s => s.timeOffset);
+  const encounterMidpointRef = useStore(s => s.encounterMidpointRef);
+  const sat1Group = useRef();
+  const sat2Group = useRef();
+  const currentSat1Ref = useRef(new THREE.Vector3());
+  const currentSat2Ref = useRef(new THREE.Vector3());
 
-  const isDanger = judgeModeStep >= 4 && judgeModeStep < 9;
+  useFrame(() => {
+    const TARGET_DATE = new Date('2026-06-10T12:00:00Z');
+    
+    // Map the -72h to +24h timeOffset into a local -1h to +1h encounter bubble
+    let localOffset = 0;
+    if (timeOffset < 0) {
+      localOffset = timeOffset / 72; // -72 -> -1.0
+    } else {
+      localOffset = timeOffset / 24; // 24 -> 1.0
+    }
+    
+    const d = new Date(TARGET_DATE.getTime() + localOffset * 3600 * 1000);
+    const s1 = propagateTLE(scenario.tlePrimary[0], scenario.tlePrimary[1], d);
+    const s2 = propagateTLE(scenario.tleChaser[0], scenario.tleChaser[1], d);
+    
+    if (s1?.position) {
+      currentSat1Ref.current.set(s1.position.x/1000, s1.position.y/1000, s1.position.z/1000);
+      if (sat1Group.current) sat1Group.current.position.copy(currentSat1Ref.current);
+    }
+    if (s2?.position) {
+      currentSat2Ref.current.set(s2.position.x/1000, s2.position.y/1000, s2.position.z/1000);
+      if (sat2Group.current) sat2Group.current.position.copy(currentSat2Ref.current);
+    }
+
+    if (encounterMidpointRef && s1?.position && s2?.position) {
+      if (!encounterMidpointRef.current) {
+        encounterMidpointRef.current = new THREE.Vector3();
+      }
+      encounterMidpointRef.current.addVectors(currentSat1Ref.current, currentSat2Ref.current).multiplyScalar(0.5);
+    }
+  });
+
+  const orbState = useStore(s => s.orbState);
+  
+  // Danger logic for cinematic sequence
+  const isDanger = (judgeModeStep >= 4 && judgeModeStep < 9) || 
+                   ['THREAT_DETECTION', 'FUTURE_PREDICTION', 'AI_EVALUATES'].includes(orbState);
+                   
+  const showMonteCarlo = ['FUTURE_PREDICTION', 'AI_EVALUATES'].includes(orbState) || engineState?.isSingular;
+  
+  const isBurning = orbState === 'MANEUVER_EXECUTION';
+  const showSafeOrbit = ['MANEUVER_EXECUTION', 'MISSION_SAFE', 'MISSION_SUMMARY'].includes(orbState);
+
+  const orbit1Safe = React.useMemo(() => {
+    if (!orbit1 || !showSafeOrbit) return null;
+    const safePoints = [];
+    orbit1.forEach((p, i) => {
+      // Bending the path around TCA (which is at index 100 for a 200-step 2-hour window)
+      if (i > 100) {
+        const factor = (i - 100) / 100;
+        const dir = p.clone().normalize();
+        safePoints.push(p.clone().add(dir.multiplyScalar(0.15 * factor)));
+      } else {
+        safePoints.push(p.clone());
+      }
+    });
+    return safePoints;
+  }, [orbit1, showSafeOrbit]);
+
+  const shadowPaths = React.useMemo(() => {
+    const paths = [];
+    for(let j=0; j<25; j++) {
+       const path = [];
+       // Random diverging trajectories for debris
+       const noiseX = (Math.random() - 0.5) * 0.8;
+       const noiseY = (Math.random() - 0.5) * 0.8;
+       const noiseZ = (Math.random() - 0.5) * 0.8;
+       orbit2.forEach((p, i) => {
+         const factor = Math.pow(i / orbit2.length, 2); 
+         path.push(new THREE.Vector3(p.x + noiseX * factor, p.y + noiseY * factor, p.z + noiseZ * factor));
+       });
+       paths.push(path);
+    }
+    return paths;
+  }, [orbit2]);
 
   // Custom shader logic to mix day and night maps based on light direction
   const customMaterialRef = useRef();
@@ -314,51 +394,45 @@ export default function Globe3D({ scenario }) {
         />
       </Sphere>
       
-      {/* Cinematic Glowing Orbit Trails */}
-      <Line 
-        points={orbit1} 
-        color="#00f0ff" 
-        lineWidth={2} 
-        transparent 
-        opacity={0.2} 
-        toneMapped={false} 
-      />
-      <Line 
-        points={orbit2} 
-        color={scenario.tier === 'Critical' ? '#ff003c' : '#ffb400'} 
-        lineWidth={2} 
-        opacity={0.3} 
-        transparent 
-        toneMapped={false} 
-      />
-
-      {/* AAA Hero Satellites / Debris Models */}
-      {baseState1?.position && (
-        <group position={[baseState1.position.x/1000, baseState1.position.y/1000, baseState1.position.z/1000]}>
-          <AuraSatellite scale={0.06} />
-        </group>
+      {/* Elio-Style Trajectory Ribbons */}
+      {showSafeOrbit ? (
+        <EnergyRibbon points={orbit1} color="#ff003c" speed={0.5} direction={1.0} radius={0.01} />
+      ) : (
+        <EnergyRibbon points={orbit1} color="#00f0ff" speed={2.0} direction={1.0} radius={0.015} />
       )}
       
-      {baseState2?.position && (
-        <group position={[baseState2.position.x/1000, baseState2.position.y/1000, baseState2.position.z/1000]}>
-          <DebrisObject scale={0.04} />
-          
-          {engineState?.isSingular && (
-            <MonteCarloCloud position={[0, 0, 0]} count={10000} isCritical={scenario.tier === 'Critical'} />
-          )}
-
-          {/* Danger Glow (Intensifies during Cinematic) */}
-          <Sphere args={[isDanger ? 0.2 : 0.1, 16, 16]}>
-             <meshBasicMaterial color={scenario.tier === 'Critical' ? '#ff003c' : '#ffb400'} transparent opacity={isDanger ? 0.6 : 0.2} toneMapped={false} />
-          </Sphere>
-          {isDanger && (
-            <pointLight color="#ff003c" intensity={5} distance={5} />
-          )}
-        </group>
+      {showSafeOrbit && orbit1Safe && (
+        <EnergyRibbon points={orbit1Safe} color="#00d084" speed={3.0} direction={1.0} radius={0.02} />
       )}
 
+      <EnergyRibbon points={orbit2} color={scenario.tier === 'Critical' ? '#ff003c' : '#ffb400'} speed={2.0} direction={1.0} radius={0.015} />
+
+      {/* Shadow Paths for Debris Uncertainty */}
+      {showMonteCarlo && shadowPaths.map((path, i) => (
+        <EnergyRibbon key={i} points={path} color="#ffb400" speed={0.5} direction={1.0} radius={0.003} opacity={0.3} />
+      ))}
+
+      {/* AAA Hero Satellites / Debris Models */}
+      <group ref={sat1Group}>
+        <AuraSatellite scale={0.06} isBurning={isBurning} />
+      </group>
+      
+      <group ref={sat2Group}>
+        <DebrisObject scale={0.04} />
+        
+        {showMonteCarlo && (
+          <MonteCarloCloud position={[0, 0, 0]} count={10000} isCritical={scenario.tier === 'Critical'} />
+        )}
+
+        {/* Danger Glow (Intensifies during Cinematic) */}
+        {isDanger && <ConjunctionBubble position={[0,0,0]} radius={0.3} color={scenario.tier === 'Critical' ? '#ff003c' : '#ffb400'} />}
+        {isDanger && (
+          <pointLight color="#ff003c" intensity={5} distance={5} />
+        )}
+      </group>
+
       {/* Cinematic Risk Corridor & TCA Visualization */}
-      {isDanger && baseState1?.position && baseState2?.position && (() => {
+      {isDanger && (() => {
         const pcValue = engineState?.Pc || 1e-6;
         // Normalize log(Pc) between 1e-6 (0.0) and 1e-2 (1.0)
         const normalizedRisk = Math.min(Math.max(Math.log10(pcValue) + 6, 0) / 4, 1);
@@ -373,42 +447,31 @@ export default function Globe3D({ scenario }) {
 
         return (
           <group>
-            <Line 
-              points={[
-                [baseState1.position.x/1000, baseState1.position.y/1000, baseState1.position.z/1000],
-                [baseState2.position.x/1000, baseState2.position.y/1000, baseState2.position.z/1000]
-              ]} 
-              color={`#${corridorColor}`} 
-              lineWidth={corridorWidth} 
-              transparent 
-              opacity={0.8 + (normalizedRisk * 0.2)} 
-              toneMapped={false} 
+            {/* Elio-Style Connection Lines */}
+            <ConnectionLines 
+              startPos={currentSat1Ref.current}
+              endPos={currentSat2Ref.current}
+              color={`#${corridorColor}`}
+              missDistance={targetMissDistance}
+              orbState={orbState}
             />
-          <Sphere position={[
-              (baseState1.position.x/1000 + baseState2.position.x/1000) / 2,
-              (baseState1.position.y/1000 + baseState2.position.y/1000) / 2,
-              (baseState1.position.z/1000 + baseState2.position.z/1000) / 2
-            ]} args={[0.05, 8, 8]}>
-            <meshBasicMaterial color="#ffffff" wireframe transparent opacity={0.5} />
-          </Sphere>
-          {baseState2?.velocity && (
-            <Line 
-              points={[
-                [baseState2.position.x/1000, baseState2.position.y/1000, baseState2.position.z/1000],
-                [
-                  baseState2.position.x/1000 + baseState2.velocity.x/200, 
-                  baseState2.position.y/1000 + baseState2.velocity.y/200, 
-                  baseState2.position.z/1000 + baseState2.velocity.z/200
-                ]
-              ]} 
-              color="#ffb400" 
-              lineWidth={1.5} 
-              transparent 
-              opacity={0.9} 
-              toneMapped={false} 
+            
+            {/* Collision Corridor */}
+            <CollisionCorridor 
+              startPos={currentSat1Ref.current}
+              endPos={currentSat2Ref.current}
+              color={`#${corridorColor}`}
+              thickness={0.05 + (normalizedRisk * 0.1)}
             />
-          )}
-        </group>
+            
+            {/* TCA Marker */}
+            <TCAMarker 
+              startPos={currentSat1Ref.current}
+              endPos={currentSat2Ref.current}
+              color={`#${corridorColor}`}
+              orbState={orbState}
+            />
+          </group>
         );
       })()}
     </group>

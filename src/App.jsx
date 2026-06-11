@@ -14,11 +14,14 @@ import NarrativeOverlay from './components/NarrativeOverlay';
 
 
 
+import CommandCenter from './components/CommandCenter';
+
 export default function App() {
   const showSimChamber = useStore((s) => s.showSimChamber);
   const scenario = useStore((s) => s.scenario);
   const immersiveMode = useStore((s) => s.immersiveMode);
   const toggleImmersive = useStore((s) => s.toggleImmersive);
+  const appView = useStore((s) => s.appView);
 
   // Keyboard shortcuts
   const handleKeyDown = useCallback((e) => {
@@ -39,6 +42,7 @@ export default function App() {
   return (
     <div className="w-screen h-screen bg-black overflow-hidden relative font-sans text-white select-none">
       {/* ═══ FULLSCREEN 3D SCENE ═══ */}
+      {/* The 3D scene is always mounted in the background to ensure instantaneous transition */}
       <Canvas
         camera={{ position: [0, 2, 20], fov: 45 }}
         gl={{ 
@@ -71,7 +75,12 @@ export default function App() {
 
       {/* ═══ HTML OVERLAY LAYER ═══ */}
       <NarrativeOverlay />
-      <CommandDeckHUD />
+      
+      {appView === 'COMMAND_CENTER' ? (
+        <CommandCenter />
+      ) : (
+        <CommandDeckHUD />
+      )}
     </div>
   );
 }

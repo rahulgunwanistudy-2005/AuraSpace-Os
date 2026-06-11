@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { Sphere, Line, Box } from '@react-three/drei';
+import { Sphere, Box } from '@react-three/drei';
 import * as THREE from 'three';
+import { DissolveRibbon, EnergyRibbon } from '../components/ElioVisuals';
 
 export default function SimulationChamber({ active, strategies }) {
   const [phase, setPhase] = useState(0);
@@ -44,8 +45,12 @@ export default function SimulationChamber({ active, strategies }) {
       </Sphere>
 
       {/* Phase 1+: Relative Motion Lines */}
-      <Line points={[[-5, 0, 0], [0, 0, 0]]} color="#00f0ff" lineWidth={2} transparent opacity={0.6} />
-      <Line points={[[0, -5, 0], [0, 0, 0]]} color="#ff003c" lineWidth={2} transparent opacity={0.6} />
+      {phase >= 1 && (
+        <>
+          <EnergyRibbon points={[new THREE.Vector3(-5, 0, 0), new THREE.Vector3(0, 0, 0)]} color="#00f0ff" radius={0.02} />
+          <EnergyRibbon points={[new THREE.Vector3(0, -5, 0), new THREE.Vector3(0, 0, 0)]} color="#ff003c" radius={0.02} />
+        </>
+      )}
 
       {/* Phase 2+: Covariance Ellipsoid */}
       {phase >= 2 && (
@@ -63,24 +68,23 @@ export default function SimulationChamber({ active, strategies }) {
         
         // Diverge at different angles
         const angle = (idx - 1) * 0.5; // -0.5, 0, 0.5
-        const endPoint = [
+        const endPoint = new THREE.Vector3(
           Math.cos(angle) * 5,
           Math.sin(angle) * 5,
           0
-        ];
+        );
 
         return (
           <group key={strat.id}>
-            <Line 
-              points={[[-2, 0, 0], endPoint]} 
+            <DissolveRibbon 
+              points={[new THREE.Vector3(-2, 0, 0), endPoint]} 
               color={color} 
-              lineWidth={isSelectedPhase && isBest ? 4 : 2} 
-              transparent 
-              opacity={opacity} 
+              radius={isSelectedPhase && isBest ? 0.05 : 0.02} 
+              dissolveProgress={isSelectedPhase && !isBest ? 1.0 : 0.0}
             />
             {/* Fuel Bar representation for Phase 4+ */}
             {phase >= 4 && (
-              <Box args={[0.2, strat.deltaV * 0.5, 0.2]} position={[endPoint[0], endPoint[1] + 1, endPoint[2]]}>
+              <Box args={[0.2, strat.deltaV * 0.5, 0.2]} position={[endPoint.x, endPoint.y + 1, endPoint.z]}>
                 <meshBasicMaterial color={color} transparent opacity={opacity} />
               </Box>
             )}

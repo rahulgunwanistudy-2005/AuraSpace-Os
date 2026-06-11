@@ -25,6 +25,25 @@ export const useStore = create((set, get) => ({
     set({ engineState });
   },
 
+  smoothScrubTo: (targetTime) => {
+    get().clearCopilotSequence();
+    set({ targetTimeOffset: targetTime });
+    
+    const animate = () => {
+      const state = get();
+      const current = state.timeOffset;
+      const target = state.targetTimeOffset;
+      
+      if (Math.abs(current - target) > 0.05) {
+        get().setTimeOffset(current + (target - current) * 0.1);
+        set({ activeAnimationId: requestAnimationFrame(animate) });
+      } else {
+        get().setTimeOffset(target);
+      }
+    };
+    set({ activeAnimationId: requestAnimationFrame(animate) });
+  },
+
   // ═══ STRATEGY ═══
   selectedStrategy: null,
   setSelectedStrategy: (selectedStrategy) => {
@@ -35,6 +54,9 @@ export const useStore = create((set, get) => ({
   },
 
   // ═══ APP PHASE ═══
+  appView: 'COMMAND_CENTER', // 'COMMAND_CENTER' | 'INVESTIGATION'
+  setAppView: (appView) => set({ appView }),
+  
   orbState: 'IDLE',
   setOrbState: (orbState) => set({ orbState }),
 
@@ -73,68 +95,169 @@ export const useStore = create((set, get) => ({
   advancedAnalysis: false,
   toggleAdvancedAnalysis: () => set((s) => ({ advancedAnalysis: !s.advancedAnalysis })),
 
-  // ═══ JUDGE MODE ORCHESTRATOR ═══
-  runJudgeModeSequence: () => {
-    set({ judgeModeActive: true, judgeModeStep: 1, lightingMode: 'CINEMATIC', immersiveMode: true, leftPanelOpen: false, rightPanelOpen: false, timeOffset: -72, selectedStrategy: null });
-    
-    // 1 Mission Brief
-    // 2 Conjunction Detected
-    setTimeout(() => set({ judgeModeStep: 2 }), 3000);
-    // 3 Risk Escalation
-    setTimeout(() => {
-      set({ judgeModeStep: 3, leftPanelOpen: true });
-      get().setTimeOffset(0); // Max risk at TCA
-    }, 6000);
-    // 4 Foster Analysis (Focus B-Plane)
-    setTimeout(() => set({ judgeModeStep: 4, rightPanelOpen: true }), 10000);
-    // 5 Monte Carlo Analysis
-    setTimeout(() => set({ judgeModeStep: 5 }), 14000);
-    // 6 AI Optimization
-    setTimeout(() => set({ judgeModeStep: 6 }), 18000);
-    // 7 Decision Trace
-    setTimeout(() => {
-      set({ judgeModeStep: 7 });
-      get().activateCopilot();
-    }, 22000);
-    // 8 Maneuver Execution
-    setTimeout(() => set({ judgeModeStep: 8 }), 28000);
-    // 9 Risk Reduction
-    setTimeout(() => set({ judgeModeStep: 9 }), 32000);
-    // 10 Mission Safe
-    setTimeout(() => {
-      set({ judgeModeStep: 10 });
-      setTimeout(() => set({ judgeModeActive: false, judgeModeStep: 0, lightingMode: 'OPERATIONAL', immersiveMode: false }), 5000);
-    }, 36000);
+  // ═══ SEQUENCE ORCHESTRATION ═══
+  sequenceTimeouts: [],
+  activeAnimationId: null,
+
+  clearCopilotSequence: () => {
+    const { sequenceTimeouts, activeAnimationId } = get();
+    sequenceTimeouts.forEach(clearTimeout);
+    if (activeAnimationId) cancelAnimationFrame(activeAnimationId);
+    set({ sequenceTimeouts: [], activeAnimationId: null });
   },
 
-  // ═══ COPILOT ACTIVATION SEQUENCE ═══
+  // ═══ JUDGE MODE ORCHESTRATOR ═══
+  runJudgeModeSequence: () => {
+    get().clearCopilotSequence();
+    // START: Reset state
+    set({ 
+      judgeModeActive: true, 
+      judgeModeStep: 1, 
+      appView: 'COMMAND_CENTER',
+      lightingMode: 'CINEMATIC', 
+      immersiveMode: true, 
+      leftPanelOpen: true, 
+      rightPanelOpen: true, 
+      timeOffset: -72, 
+      selectedStrategy: null, 
+      advancedAnalysis: false 
+    });
+    
+    // Step 1: Massive Earth Hero Shot (0-5s) - UI is hidden by CommandCenter returning null for step < 2
+
+    // Step 2: Overlay appears: MONITORING 1432 ALERTS (5-8s)
+    const t1 = setTimeout(() => {
+      set({ judgeModeStep: 2 });
+    }, 5000);
+
+    // Step 3: Command Center slides in. Stream begins flowing. (8-11s)
+    const t2 = setTimeout(() => {
+      set({ judgeModeStep: 3 });
+    }, 8000);
+    
+    // Step 4: AI starts triaging. Critical alert escalates. (11-15s)
+    const t3 = setTimeout(() => {
+      set({ judgeModeStep: 4 });
+    }, 11000);
+
+    // Step 5: Critical alert selected. Transition animation triggers.
+    const t4 = setTimeout(() => {
+      set({ judgeModeStep: 5 });
+    }, 15000);
+
+    // Step 6: AppView switches to INVESTIGATION and Sequence begins
+    const t5 = setTimeout(() => {
+      set({ appView: 'INVESTIGATION' });
+      get().activateCopilot();
+    }, 17000);
+
+    set({ sequenceTimeouts: [t1, t2, t3, t4, t5] });
+  },
+
+  // ═══ STORY MODE ═══
+  storyMode: true,
+  toggleStoryMode: () => set((s) => ({ storyMode: !s.storyMode })),
+
+  // ═══ ANIMATION TARGETS ═══
+  targetMissDistance: 421,
+  targetConfidence: 30,
+  targetTimeOffset: -72,
+  encounterMidpointRef: { current: null }, // Initialized via Three.js later
+
+  // ═══ COPILOT ACTIVATION SEQUENCE (5-PHASE CINEMATIC) ═══
   activateCopilot: () => {
-    const { scenario, setOrbState, setShowSimChamber, setShowCinematicReveal, setSelectedStrategy } = get();
+    get().clearCopilotSequence();
+    const { scenario, setOrbState, setShowSimChamber, setSelectedStrategy, setTimeOffset } = get();
     
-    // Phase 1: UI dims, Orb ignites
-    setOrbState('THINKING');
-    set({ immersiveMode: true, leftPanelOpen: false, rightPanelOpen: false });
-    
-    // Phase 2: Simulation chamber
-    setTimeout(() => {
-      setOrbState('SIMULATING');
-      setShowSimChamber(true);
-    }, 2000);
-    
-    // Phase 3: Decision reveal
-    setTimeout(() => {
-      setShowSimChamber(false);
-      setOrbState('DECISION');
-      setShowCinematicReveal(true);
+    set({ targetMissDistance: 421, targetConfidence: 30, targetTimeOffset: -72 });
+
+    // Smooth animator loop for cinematic playback
+    const animate = () => {
+      const state = get();
+      if (state.orbState === 'IDLE') return; // Stop if aborted or finished
       
+      const current = state.timeOffset;
+      const target = state.targetTimeOffset;
+      
+      if (Math.abs(current - target) > 0.01) {
+        setTimeOffset(current + (target - current) * 0.05);
+      }
+      
+      set({ activeAnimationId: requestAnimationFrame(animate) });
+    };
+    set({ activeAnimationId: requestAnimationFrame(animate) });
+
+    // Phase 1: Threat Detection (0-4s)
+    setOrbState('THREAT_DETECTION');
+    set({ targetTimeOffset: -48 });
+    
+    // Phase 2: Future Prediction (4-9s)
+    const t1 = setTimeout(() => {
+      setOrbState('FUTURE_PREDICTION');
+      setShowSimChamber(true); // Bring up Monte Carlo & B-Plane
+      set({ targetConfidence: 55, targetTimeOffset: -24 });
+    }, 4000);
+    
+    // Phase 3: AI Evaluates (9-13s)
+    const t2 = setTimeout(() => {
+      setOrbState('AI_EVALUATES');
+      set({ targetConfidence: 85, targetTimeOffset: -12 });
+    }, 9000);
+
+    // Phase 3.5: AI Choice Locked (13-16s)
+    const t3 = setTimeout(() => {
+      setOrbState('MANEUVER_LOCKED');
       const best = scenario.strategies.find(s => s.recommendation === 'Best');
       setSelectedStrategy(best || scenario.strategies[0]);
-    }, 6000);
+      set({ targetTimeOffset: -2 }); // Approach TCA slowly
+    }, 13000);
     
-    // Phase 4: Return to command deck
-    setTimeout(() => {
-      setShowCinematicReveal(false);
-      set({ immersiveMode: false, leftPanelOpen: true, rightPanelOpen: true });
-    }, 10000);
+    // Phase 4: Maneuver Execution (16-20s)
+    const t4 = setTimeout(() => {
+      setOrbState('MANEUVER_EXECUTION');
+      set({ targetConfidence: 99.9, targetMissDistance: 3800, targetTimeOffset: 1 });
+    }, 16000);
+    
+    // Phase 5: Mission Safe (20-25s)
+    const t5 = setTimeout(() => {
+      setOrbState('MISSION_SAFE');
+      setShowSimChamber(false);
+      set({ targetTimeOffset: 12 });
+    }, 20000);
+    
+    // Phase 6: Mission Summary (25-30s)
+    const t6 = setTimeout(() => {
+      setOrbState('MISSION_SUMMARY');
+      set({ targetTimeOffset: 24 });
+    }, 25000);
+
+    // Phase 7: Return to IDLE & Command Center (30s)
+    const t7 = setTimeout(() => {
+      set({ 
+        orbState: 'IDLE', 
+        judgeModeActive: false, 
+        judgeModeStep: 0, 
+        appView: 'COMMAND_CENTER', 
+        lightingMode: 'OPERATIONAL', 
+        immersiveMode: false,
+        timeOffset: -72,
+        targetTimeOffset: -72
+      });
+      get().clearCopilotSequence();
+    }, 30000);
+
+    set({ sequenceTimeouts: [t1, t2, t3, t4, t5, t6, t7] });
   },
+  
+  abortCopilotSequence: () => {
+    get().clearCopilotSequence();
+    set({
+      orbState: 'IDLE',
+      judgeModeActive: false,
+      judgeModeStep: 0,
+      appView: 'COMMAND_CENTER',
+      lightingMode: 'OPERATIONAL',
+      immersiveMode: false,
+    });
+  }
 }));

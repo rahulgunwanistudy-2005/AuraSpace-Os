@@ -54,7 +54,9 @@ class OrbitalEngine {
       '-48': 85,
       '-24': 92,
       '-12': 96,
-      '0': 99
+      '0': 99,
+      '12': 90,
+      '24': 85
     };
     const conf = confidenceMap[Math.round(timeOffsetHours).toString()] || 85;
 

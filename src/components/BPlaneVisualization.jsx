@@ -7,34 +7,54 @@ import { useStore } from '../state/store';
 
 const heatmapVertexShader = `
   varying vec2 vUv;
+  varying float vProb;
+  uniform float sigmaX;
+  uniform float sigmaY;
+  uniform vec2 mu;
+  uniform float time;
+
   void main() {
     vUv = uv;
-    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    vec2 p = vUv - vec2(0.5);
+    p *= 20.0;
+    
+    // Calculate probability density for displacement (3D holographic mountain)
+    float distSq = (p.x * p.x) / (sigmaX * sigmaX) + (p.y * p.y) / (sigmaY * sigmaY);
+    float prob = exp(-0.5 * distSq);
+    vProb = prob;
+    
+    // Displace z based on probability
+    vec3 newPos = position;
+    newPos.z += prob * 4.0; // Extrude up to 4 units
+    
+    // Add holographic breathing
+    newPos.z += sin(time * 2.0 + length(p)) * 0.1 * prob;
+
+    gl_Position = projectionMatrix * modelViewMatrix * vec4(newPos, 1.0);
   }
 `;
 
 const heatmapFragmentShader = `
   varying vec2 vUv;
+  varying float vProb;
   uniform float sigmaX;
   uniform float sigmaY;
   uniform vec2 mu;
   uniform float hbr;
   uniform float riskLevel;
+  uniform float time;
   
   void main() {
     vec2 p = vUv - vec2(0.5);
     p *= 20.0;
     
-    float distSq = (p.x * p.x) / (sigmaX * sigmaX) + (p.y * p.y) / (sigmaY * sigmaY);
-    float prob = exp(-0.5 * distSq);
-    
     vec3 col = vec3(0.0);
     if (riskLevel > 2.5) {
-      col = mix(vec3(0.05, 0.0, 0.0), vec3(1.0, 0.0, 0.2), prob);
+      col = mix(vec3(0.05, 0.0, 0.0), vec3(1.0, 0.0, 0.2), vProb);
     } else if (riskLevel > 1.5) {
-      col = mix(vec3(0.05, 0.04, 0.0), vec3(1.0, 0.7, 0.0), prob);
+      col = mix(vec3(0.05, 0.04, 0.0), vec3(1.0, 0.7, 0.0), vProb);
     } else {
-      col = mix(vec3(0.0, 0.04, 0.0), vec3(0.0, 1.0, 0.2), prob);
+      col = mix(vec3(0.0, 0.04, 0.0), vec3(0.0, 1.0, 0.2), vProb);
     }
     
     float primary = smoothstep(0.3, 0.2, length(p));
@@ -43,7 +63,14 @@ const heatmapFragmentShader = `
     col = mix(col, vec3(0.0, 0.9, 1.0), primary);
     col = mix(col, vec3(1.0, 1.0, 1.0), chaser);
     
-    float alpha = prob * 0.8 + primary + chaser;
+    // Grid lines for holographic feel
+    float grid = max(
+      step(0.95, fract(vUv.x * 40.0)),
+      step(0.95, fract(vUv.y * 40.0))
+    );
+    col += vec3(grid * 0.2 * vProb);
+    
+    float alpha = vProb * 0.8 + primary + chaser + grid * 0.1 * vProb;
     if (alpha < 0.03) discard;
     
     gl_FragColor = vec4(col, min(alpha, 1.0));
@@ -53,37 +80,64 @@ const heatmapFragmentShader = `
 function BPlaneScene({ stats, hbr, riskTier }) {
   const matRef = useRef();
 
-  useFrame(() => {
+  useFrame(({ clock }) => {
     if (matRef.current && stats) {
       matRef.current.uniforms.sigmaX.value = Math.sqrt(Math.abs(stats.lambda1) || 1);
       matRef.current.uniforms.sigmaY.value = Math.sqrt(Math.abs(stats.lambda2) || 1);
       matRef.current.uniforms.mu.value.set(stats.mu?.x || 0, stats.mu?.y || 0);
       matRef.current.uniforms.hbr.value = hbr || 0.05;
       matRef.current.uniforms.riskLevel.value = riskTier === 'Critical' ? 3.0 : riskTier === 'Warning' ? 2.0 : 1.0;
+      matRef.current.uniforms.time.value = clock.elapsedTime;
     }
   });
 
   return (
     <>
-      <OrbitControls enableDamping dampingFactor={0.05} enableRotate={false} />
-      <mesh rotation={[0, 0, stats ? -(stats.theta || 0) : 0]}>
-        <planeGeometry args={[15, 15]} />
-        <shaderMaterial
-          ref={matRef}
-          vertexShader={heatmapVertexShader}
-          fragmentShader={heatmapFragmentShader}
-          uniforms={{
-            sigmaX: { value: 1.0 },
-            sigmaY: { value: 1.0 },
-            mu: { value: new THREE.Vector2(0, 0) },
-            hbr: { value: 0.05 },
-            riskLevel: { value: 1.0 },
-          }}
-          transparent
-          depthWrite={false}
-        />
-      </mesh>
-      <gridHelper args={[20, 20, 0x00f0ff, 0x00f0ff]} rotation={[Math.PI / 2, 0, 0]} material-opacity={0.08} material-transparent />
+      <OrbitControls enableDamping dampingFactor={0.05} maxPolarAngle={Math.PI / 2.2} />
+      <group rotation={[-Math.PI / 3, 0, stats ? -(stats.theta || 0) : 0]}>
+        <mesh>
+          {/* Use higher segment count for displacement map */}
+          <planeGeometry args={[15, 15, 128, 128]} />
+          <shaderMaterial
+            ref={matRef}
+            vertexShader={heatmapVertexShader}
+            fragmentShader={heatmapFragmentShader}
+            uniforms={{
+              sigmaX: { value: 1.0 },
+              sigmaY: { value: 1.0 },
+              mu: { value: new THREE.Vector2(0, 0) },
+              hbr: { value: 0.05 },
+              riskLevel: { value: 1.0 },
+              time: { value: 0.0 }
+            }}
+            transparent
+            depthWrite={false}
+            side={THREE.DoubleSide}
+            wireframe={false}
+          />
+        </mesh>
+        
+        {/* Holographic Wireframe overlay */}
+        <mesh position={[0, 0, 0.01]}>
+          <planeGeometry args={[15, 15, 64, 64]} />
+          <shaderMaterial
+            vertexShader={heatmapVertexShader}
+            fragmentShader={heatmapFragmentShader}
+            uniforms={{
+              sigmaX: { value: Math.sqrt(Math.abs(stats?.lambda1) || 1) },
+              sigmaY: { value: Math.sqrt(Math.abs(stats?.lambda2) || 1) },
+              mu: { value: new THREE.Vector2(stats?.mu?.x || 0, stats?.mu?.y || 0) },
+              hbr: { value: hbr || 0.05 },
+              riskLevel: { value: riskTier === 'Critical' ? 3.0 : riskTier === 'Warning' ? 2.0 : 1.0 },
+              time: { value: 0.0 }
+            }}
+            transparent
+            depthWrite={false}
+            wireframe={true}
+            opacity={0.1}
+          />
+        </mesh>
+      </group>
     </>
   );
 }
@@ -121,8 +175,8 @@ export default function BPlaneVisualization() {
   return (
     <div className="w-full h-full relative group">
       <div className="absolute inset-0">
-        <Canvas camera={{ position: [0, 0, 15], fov: 50 }}>
-          <OrbitControls enableZoom={false} enablePan={false} />
+        <Canvas camera={{ position: [0, -8, 10], fov: 60 }}>
+          <OrbitControls enableZoom={true} enablePan={true} />
           <BPlaneScene stats={currentStats} hbr={scenario.hbr} riskTier={engineState.riskTier} />
         </Canvas>
       </div>

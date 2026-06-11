@@ -15,9 +15,12 @@ function CinematicLighting({ judgeModeStep, lightingMode }) {
     const isDanger = judgeModeStep >= 4 && judgeModeStep < 9;
     const isCinematic = lightingMode === 'CINEMATIC';
     
-    const targetSun = isDanger ? 0.2 : (isCinematic ? 1.5 : 2.0);
-    const targetAmb = isDanger ? 0.05 : (isCinematic ? 0.1 : 0.2);
-    const targetPos = isCinematic ? new THREE.Vector3(-20, 5, -15) : new THREE.Vector3(-10, 5, 10);
+    // Pure, premium lighting. No artificial cyan or heavy blues.
+    const targetSun = isDanger ? 0.8 : (isCinematic ? 1.5 : 1.8);
+    const targetAmb = isDanger ? 0.02 : (isCinematic ? 0.05 : 0.1);
+    
+    // Light from top-left, cinematic rim light style
+    const targetPos = isCinematic ? new THREE.Vector3(-15, 8, -5) : new THREE.Vector3(-12, 10, 8);
 
     if (dirLight.current) {
       dirLight.current.intensity = THREE.MathUtils.lerp(dirLight.current.intensity, targetSun, delta * 2);
@@ -30,11 +33,11 @@ function CinematicLighting({ judgeModeStep, lightingMode }) {
 
   return (
     <>
-      <ambientLight ref={ambLight} intensity={0.1} color="#020412" />
+      <ambientLight ref={ambLight} intensity={0.1} color="#ffffff" />
       <directionalLight 
         ref={dirLight}
-        position={[-10, 5, 10]}
-        intensity={1.5} 
+        position={[-12, 10, 8]}
+        intensity={1.8} 
         color="#ffffff" 
         castShadow
         shadow-mapSize={[2048, 2048]}
@@ -54,16 +57,16 @@ export default function MainCommandDeck() {
     <>
       <CinematicLighting judgeModeStep={judgeModeStep} lightingMode={lightingMode} />
 
-      {/* Earth — 1.5x scale, balanced composition */}
-      <group position={immersiveMode ? [0, -3, -12] : [-6, -2, -16]}>
+      {/* Earth — Centered in the workspace (shifted slightly right to account for 240px sidebar) */}
+      <group position={[1.5, -1, -6]}>
         <Globe3D scenario={scenario} />
       </group>
 
       {/* Moon */}
       <Moon />
 
-      {/* Quantum Orb — shifts right normally, centers in immersive */}
-      <group position={immersiveMode ? [0, 3, -3] : [7, 2, -5]}>
+      {/* Quantum Orb — Subtly positioned to not compete with Earth */}
+      <group position={[8, 4, -4]} scale={[0.5, 0.5, 0.5]}>
         <QuantumOrb state={orbState} />
       </group>
     </>

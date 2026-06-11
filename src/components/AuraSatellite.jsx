@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Box, Cylinder, Sphere, Torus } from '@react-three/drei';
 import * as THREE from 'three';
 
-export default function AuraSatellite({ scale = 1, position = [0, 0, 0], rotation = [0, 0, 0] }) {
+export default function AuraSatellite({ scale = 1, position = [0, 0, 0], rotation = [0, 0, 0], isBurning = false }) {
   const groupRef = useRef();
 
   // Advanced PBR Materials
@@ -111,7 +111,22 @@ export default function AuraSatellite({ scale = 1, position = [0, 0, 0], rotatio
       {/* 6. Propulsion Deck (Aft) */}
       <Cylinder args={[0.45, 0.45, 0.1, 6]} position={[0, -0.8, 0]} material={spaceAluminum} />
       {/* Main Engine Nozzle */}
-      <Cylinder args={[0.1, 0.2, 0.3, 16]} position={[0, -1.0, 0]} material={spaceAluminum} />
+      <group position={[0, -1.0, 0]}>
+        <Cylinder args={[0.1, 0.2, 0.3, 16]} material={spaceAluminum} />
+        {/* Animated Thruster Plume */}
+        {isBurning && (
+          <mesh position={[0, -0.6, 0]}>
+            <coneGeometry args={[0.25, 1.2, 16]} />
+            <meshBasicMaterial 
+              color="#00f0ff" 
+              transparent 
+              opacity={0.8}
+              blending={THREE.AdditiveBlending}
+              depthWrite={false}
+            />
+          </mesh>
+        )}
+      </group>
       {/* RCS Thruster Pods */}
       {[0, Math.PI/2, Math.PI, 3*Math.PI/2].map((angle, i) => (
         <group key={i} rotation={[0, angle, 0]} position={[0.4, -0.75, 0]}>
