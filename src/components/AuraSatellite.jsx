@@ -26,7 +26,7 @@ export default function AuraSatellite({ scale = 1, position = [0, 0, 0], rotatio
     metalness: 0.1,
   });
 
-  const solarCell = new THREE.MeshStandardMaterial({
+  const solarCell = new THREE.MeshPhysicalMaterial({
     color: '#020b1f',
     roughness: 0.1,
     metalness: 0.7,

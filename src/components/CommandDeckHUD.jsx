@@ -74,6 +74,8 @@ export default function CommandDeckHUD() {
   const activateCopilot = useStore((s) => s.activateCopilot);
   const abortCopilotSequence = useStore((s) => s.abortCopilotSequence);
   const isThinking = orbState === 'THINKING' || orbState === 'SIMULATING' || orbState === 'THREAT_DETECTION' || orbState === 'FUTURE_PREDICTION' || orbState === 'AI_EVALUATES';
+  const isComputing = useStore((s) => s.isComputing);
+  const computingLabel = useStore((s) => s.computingLabel);
 
   const judgeModeActive = useStore((s) => s.judgeModeActive);
   const judgeModeStep = useStore((s) => s.judgeModeStep);
@@ -624,6 +626,16 @@ export default function CommandDeckHUD() {
         </div>
         <div className="text-[#8a91a6] text-sm tracking-widest mt-4 uppercase shadow-black drop-shadow-md">
           PREPARING THRUSTER IGNITION
+        </div>
+      </div>
+
+      {/* ═══ COMPUTING NOTIFICATION BAR ═══ */}
+      <div className={`absolute top-20 left-1/2 -translate-x-1/2 z-[160] pointer-events-none transition-all duration-500 ${isComputing ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4'}`}>
+        <div className="flex items-center gap-3 bg-[#070b14]/90 backdrop-blur-md border border-[#9d8df1]/40 rounded-lg px-5 py-2.5 shadow-lg shadow-[#9d8df1]/10">
+          <div className="relative w-4 h-4 flex items-center justify-center">
+            <div className="absolute w-full h-full border-2 border-[#9d8df1] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+          <span className="text-xs font-semibold text-[#9d8df1] tracking-wider uppercase whitespace-nowrap">{computingLabel}</span>
         </div>
       </div>
 

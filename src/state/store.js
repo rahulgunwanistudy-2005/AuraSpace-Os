@@ -60,6 +60,11 @@ export const useStore = create((set, get) => ({
   orbState: 'IDLE',
   setOrbState: (orbState) => set({ orbState }),
 
+  // ═══ LOADING / COMPUTING STATE ═══
+  isComputing: false,
+  computingLabel: '',
+  setComputing: (isComputing, computingLabel = '') => set({ isComputing, computingLabel }),
+
   // ═══ UI STATE ═══
   leftPanelOpen: true,
   rightPanelOpen: true,
@@ -120,29 +125,31 @@ export const useStore = create((set, get) => ({
       rightPanelOpen: true, 
       timeOffset: -72, 
       selectedStrategy: null, 
-      advancedAnalysis: false 
+      advancedAnalysis: false,
+      isComputing: true,
+      computingLabel: 'Initializing orbital traffic scan...'
     });
     
     // Step 1: Massive Earth Hero Shot (0-5s) - UI is hidden by CommandCenter returning null for step < 2
 
     // Step 2: Overlay appears: MONITORING 1432 ALERTS (5-8s)
     const t1 = setTimeout(() => {
-      set({ judgeModeStep: 2 });
+      set({ judgeModeStep: 2, computingLabel: 'Processing conjunction alerts...' });
     }, 5000);
 
     // Step 3: Command Center slides in. Stream begins flowing. (8-11s)
     const t2 = setTimeout(() => {
-      set({ judgeModeStep: 3 });
+      set({ judgeModeStep: 3, computingLabel: 'Triaging alert queue...' });
     }, 8000);
     
     // Step 4: AI starts triaging. Critical alert escalates. (11-15s)
     const t3 = setTimeout(() => {
-      set({ judgeModeStep: 4 });
+      set({ judgeModeStep: 4, computingLabel: 'Escalating critical threat...' });
     }, 11000);
 
     // Step 5: Critical alert selected. Transition animation triggers.
     const t4 = setTimeout(() => {
-      set({ judgeModeStep: 5 });
+      set({ judgeModeStep: 5, isComputing: false, computingLabel: '' });
     }, 15000);
 
     // Step 6: AppView switches to INVESTIGATION and Sequence begins
@@ -189,19 +196,19 @@ export const useStore = create((set, get) => ({
 
     // Phase 1: Threat Detection (0-4s)
     setOrbState('THREAT_DETECTION');
-    set({ targetTimeOffset: -48 });
+    set({ targetTimeOffset: -48, isComputing: true, computingLabel: 'Analyzing conjunction data...' });
     
     // Phase 2: Future Prediction (4-9s)
     const t1 = setTimeout(() => {
       setOrbState('FUTURE_PREDICTION');
-      setShowSimChamber(true); // Bring up Monte Carlo & B-Plane
-      set({ targetConfidence: 55, targetTimeOffset: -24 });
+      setShowSimChamber(true);
+      set({ targetConfidence: 55, targetTimeOffset: -24, computingLabel: 'Running Monte Carlo simulations...' });
     }, 4000);
     
     // Phase 3: AI Evaluates (9-13s)
     const t2 = setTimeout(() => {
       setOrbState('AI_EVALUATES');
-      set({ targetConfidence: 85, targetTimeOffset: -12 });
+      set({ targetConfidence: 85, targetTimeOffset: -12, computingLabel: 'Evaluating maneuver strategies...' });
     }, 9000);
 
     // Phase 3.5: AI Choice Locked (13-16s)
@@ -209,7 +216,7 @@ export const useStore = create((set, get) => ({
       setOrbState('MANEUVER_LOCKED');
       const best = scenario.strategies.find(s => s.recommendation === 'Best');
       setSelectedStrategy(best || scenario.strategies[0]);
-      set({ targetTimeOffset: -2 }); // Approach TCA slowly
+      set({ targetTimeOffset: -2, isComputing: false, computingLabel: '' });
     }, 13000);
     
     // Phase 4: Maneuver Execution (16-20s)
@@ -258,6 +265,8 @@ export const useStore = create((set, get) => ({
       appView: 'COMMAND_CENTER',
       lightingMode: 'OPERATIONAL',
       immersiveMode: false,
+      isComputing: false,
+      computingLabel: '',
     });
   }
 }));

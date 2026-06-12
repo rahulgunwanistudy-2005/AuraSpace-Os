@@ -139,15 +139,18 @@ export function ConjunctionBubble({ position, radius = 0.5, color = "#00aaff" })
 // --- Collision Corridor ---
 export function CollisionCorridor({ startPos, endPos, color, thickness }) {
   const meshRef = useRef();
+  const midpointVec = useRef(new THREE.Vector3());
+  const dirVec = useRef(new THREE.Vector3());
+  const upVec = useRef(new THREE.Vector3(0, 1, 0));
   
   const distance = useMemo(() => startPos.distanceTo(endPos), [startPos, endPos]);
   
   useFrame(() => {
     if (meshRef.current) {
-      // Orient cylinder between start and end
-      const midpoint = new THREE.Vector3().addVectors(startPos, endPos).multiplyScalar(0.5);
-      meshRef.current.position.copy(midpoint);
-      meshRef.current.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3().subVectors(endPos, startPos).normalize());
+      midpointVec.current.addVectors(startPos, endPos).multiplyScalar(0.5);
+      meshRef.current.position.copy(midpointVec.current);
+      dirVec.current.subVectors(endPos, startPos).normalize();
+      meshRef.current.quaternion.setFromUnitVectors(upVec.current, dirVec.current);
     }
   });
 

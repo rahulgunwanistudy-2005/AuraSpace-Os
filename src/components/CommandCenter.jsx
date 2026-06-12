@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../state/store';
-import { AlertCircle, CheckCircle2, ShieldAlert, Activity, ChevronRight, Settings, Radio } from 'lucide-react';
+import { AlertCircle, CheckCircle2, ShieldAlert, Activity, ChevronRight, Settings, Radio, Cpu } from 'lucide-react';
 
 export default function CommandCenter() {
   const setAppView = useStore((s) => s.setAppView);
   const judgeModeActive = useStore((s) => s.judgeModeActive);
   const runJudgeModeSequence = useStore((s) => s.runJudgeModeSequence);
   const judgeModeStep = useStore((s) => s.judgeModeStep);
+  const isComputing = useStore((s) => s.isComputing);
+  const computingLabel = useStore((s) => s.computingLabel);
 
   const [alerts, setAlerts] = useState([
     {
@@ -298,6 +300,18 @@ export default function CommandCenter() {
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-[100] animate-fade-in">
           <div className="text-3xl font-bold tracking-widest text-white bg-black/50 px-8 py-4 rounded backdrop-blur-sm border border-[#2a2f3a]">
             MONITORING 1,432 ACTIVE CONJUNCTION ALERTS
+          </div>
+        </div>
+      )}
+
+      {/* COMPUTING NOTIFICATION */}
+      {isComputing && (
+        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-[110] pointer-events-none animate-fade-in">
+          <div className="flex items-center gap-3 bg-[#070b14]/90 backdrop-blur-md border border-[#9d8df1]/40 rounded-lg px-5 py-2.5 shadow-lg shadow-[#9d8df1]/10">
+            <div className="relative w-4 h-4 flex items-center justify-center">
+              <div className="absolute w-full h-full border-2 border-[#9d8df1] border-t-transparent rounded-full animate-spin"></div>
+            </div>
+            <span className="text-xs font-semibold text-[#9d8df1] tracking-wider uppercase whitespace-nowrap">{computingLabel}</span>
           </div>
         </div>
       )}
