@@ -4,6 +4,7 @@ import { useStore } from '../state/store';
 export default function NarrativeOverlay() {
   const judgeModeActive = useStore((s) => s.judgeModeActive);
   const judgeModeStep = useStore((s) => s.judgeModeStep);
+  const orbState = useStore((s) => s.orbState);
 
   const [narrativeText, setNarrativeText] = useState('');
   const [displayedText, setDisplayedText] = useState('');
@@ -15,35 +16,35 @@ export default function NarrativeOverlay() {
       return;
     }
 
-    switch (judgeModeStep) {
-      case 2:
-        setNarrativeText('MISSION STATUS:\nConjunction detected.');
-        break;
-      case 4:
-        setNarrativeText('Computing collision probability...');
-        break;
-      case 6:
-        setNarrativeText('Evaluating avoidance maneuvers...');
-        break;
-      case 7:
-        setNarrativeText('Optimal solution identified.');
-        break;
-      case 10:
-        setNarrativeText('Mission safe.');
-        break;
-      default:
-        // Retain current text during intermediate steps
-        break;
+    // Map narrative text based on judgeModeStep or orbState
+    if (judgeModeStep === 3) {
+      setNarrativeText('MISSION STATUS:\nConjunction detected.');
+    } else if (judgeModeStep === 4) {
+      setNarrativeText('Computing collision probability...');
+    } else if (judgeModeStep === 5) {
+      setNarrativeText('Analyzing encounter geometry...');
     }
-  }, [judgeModeActive, judgeModeStep]);
+
+    if (orbState === 'AI_EVALUATES') {
+      setNarrativeText('Evaluating avoidance maneuvers...');
+    } else if (orbState === 'MANEUVER_LOCKED') {
+      setNarrativeText('Optimal solution identified.');
+    } else if (orbState === 'MISSION_SAFE') {
+      setNarrativeText('Mission safe.');
+    } else if (judgeModeStep < 3 && orbState === 'IDLE') {
+      setNarrativeText('');
+    }
+  }, [judgeModeActive, judgeModeStep, orbState]);
 
   // Typing effect
   useEffect(() => {
     setDisplayedText('');
     let i = 0;
+    let currentText = '';
     const interval = setInterval(() => {
       if (i < narrativeText.length) {
-        setDisplayedText(prev => prev + narrativeText.charAt(i));
+        currentText += narrativeText.charAt(i);
+        setDisplayedText(currentText);
         i++;
       } else {
         clearInterval(interval);
@@ -64,3 +65,4 @@ export default function NarrativeOverlay() {
     </div>
   );
 }
+
