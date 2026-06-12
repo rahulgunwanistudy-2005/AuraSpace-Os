@@ -56,8 +56,8 @@ export default function NarrativeOverlay() {
   if (!judgeModeActive || !narrativeText) return null;
 
   return (
-    <div className="absolute top-1/4 left-1/2 -translate-x-1/2 text-center pointer-events-none z-[100] drop-shadow-[0_0_15px_rgba(0,0,0,1)]">
-      <div className="font-mono text-xl md:text-3xl font-bold tracking-[0.2em] text-white whitespace-pre-wrap leading-relaxed animate-fade-in uppercase">
+    <div className="absolute inset-0 flex items-start justify-center pointer-events-none z-[200]" style={{ paddingTop: '22%' }}>
+      <div className="font-mono text-xl md:text-3xl font-bold tracking-[0.2em] text-white whitespace-pre-wrap leading-relaxed animate-fade-in uppercase text-center px-8 drop-shadow-[0_0_20px_rgba(0,0,0,1)]">
         {displayedText}
         <span className="animate-pulse">_</span>
       </div>
