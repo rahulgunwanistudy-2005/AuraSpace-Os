@@ -73,14 +73,14 @@ export default function App() {
         </EffectComposer>
       </Canvas>
 
-      {/* ═══ HTML OVERLAY LAYER ═══ */}
-      <NarrativeOverlay />
-      
       {appView === 'COMMAND_CENTER' ? (
         <CommandCenter />
       ) : (
         <CommandDeckHUD />
       )}
+      
+      {/* ═══ HTML OVERLAY LAYER ═══ */}
+      <NarrativeOverlay />
     </div>
   );
 }
