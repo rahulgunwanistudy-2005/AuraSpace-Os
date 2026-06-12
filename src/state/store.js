@@ -205,41 +205,40 @@ export const useStore = create((set, get) => ({
       set({ targetConfidence: 55, targetTimeOffset: -24, computingLabel: 'Running Monte Carlo simulations...' });
     }, 4000);
     
-    // Phase 3: AI Evaluates (9-13s)
+    // Phase 3: Options Ready (9s)
     const t2 = setTimeout(() => {
-      setOrbState('AI_EVALUATES');
-      set({ targetConfidence: 85, targetTimeOffset: -12, computingLabel: 'Evaluating maneuver strategies...' });
+      setOrbState('OPTIONS_READY');
+      set({ targetConfidence: 85, targetTimeOffset: -12, computingLabel: '', isComputing: false });
     }, 9000);
 
-    // Phase 3.5: AI Choice Locked (13-16s)
-    const t3 = setTimeout(() => {
-      setOrbState('MANEUVER_LOCKED');
-      const best = scenario.strategies.find(s => s.recommendation === 'Best');
-      setSelectedStrategy(best || scenario.strategies[0]);
-      set({ targetTimeOffset: -2, isComputing: false, computingLabel: '' });
-    }, 13000);
+    set({ sequenceTimeouts: [t1, t2] });
+  },
+
+  executeManeuver: (strategy) => {
+    get().clearCopilotSequence();
+    const { setOrbState, setSelectedStrategy, setShowSimChamber } = get();
     
-    // Phase 4: Maneuver Execution (16-20s)
-    const t4 = setTimeout(() => {
+    setSelectedStrategy(strategy);
+    setOrbState('MANEUVER_LOCKED');
+    set({ targetTimeOffset: -2, isComputing: false, computingLabel: '' });
+    
+    const t1 = setTimeout(() => {
       setOrbState('MANEUVER_EXECUTION');
       set({ targetConfidence: 99.9, targetMissDistance: 3800, targetTimeOffset: 1 });
-    }, 16000);
+    }, 3000);
     
-    // Phase 5: Mission Safe (20-25s)
-    const t5 = setTimeout(() => {
+    const t2 = setTimeout(() => {
       setOrbState('MISSION_SAFE');
       setShowSimChamber(false);
       set({ targetTimeOffset: 12 });
-    }, 20000);
+    }, 7000);
     
-    // Phase 6: Mission Summary (25-30s)
-    const t6 = setTimeout(() => {
+    const t3 = setTimeout(() => {
       setOrbState('MISSION_SUMMARY');
       set({ targetTimeOffset: 24 });
-    }, 25000);
+    }, 12000);
 
-    // Phase 7: Return to IDLE & Command Center (30s)
-    const t7 = setTimeout(() => {
+    const t4 = setTimeout(() => {
       set({ 
         orbState: 'IDLE', 
         judgeModeActive: false, 
@@ -248,12 +247,12 @@ export const useStore = create((set, get) => ({
         lightingMode: 'OPERATIONAL', 
         immersiveMode: false,
         timeOffset: -72,
-        targetTimeOffset: -72
+        targetTimeOffset: -72,
+        selectedStrategy: null
       });
-      get().clearCopilotSequence();
-    }, 30000);
-
-    set({ sequenceTimeouts: [t1, t2, t3, t4, t5, t6, t7] });
+    }, 17000);
+    
+    set({ sequenceTimeouts: [t1, t2, t3, t4] });
   },
   
   abortCopilotSequence: () => {

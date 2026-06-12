@@ -1,7 +1,7 @@
 import React from 'react';
 
 export default function RiskPanel({ scenario, Pc, riskTier, confidence, onClose }) {
-  const riskColor = riskTier === 'Critical' ? 'neon-red' : riskTier === 'Warning' ? 'neon-amber' : 'neon-green';
+  const riskColor = riskTier === 'Critical' ? '#F24E4E' : riskTier === 'Warning' ? 'neon-amber' : 'neon-green';
   const riskClass = riskTier === 'Critical' ? 'risk-critical' : riskTier === 'Warning' ? 'risk-warning' : 'risk-safe';
 
   return (

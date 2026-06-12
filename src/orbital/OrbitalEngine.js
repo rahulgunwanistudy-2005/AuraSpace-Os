@@ -60,8 +60,8 @@ class OrbitalEngine {
     };
     const conf = confidenceMap[Math.round(timeOffsetHours).toString()] || 85;
 
-    // Compute base B-Plane
-    const bp = computeBPlane(this.baseState1.position, this.baseState1.velocity, this.baseState2.position, this.baseState2.velocity, cov3D);
+    // Compute base B-Plane using ECI
+    const bp = computeBPlane(this.baseState1.eci.position, this.baseState1.eci.velocity, this.baseState2.eci.position, this.baseState2.eci.velocity, cov3D);
     
     let mu = { ...this.scenario.muTarget };
     let finalC = bp.C;
@@ -79,7 +79,7 @@ class OrbitalEngine {
     }
     
     let prob = 0;
-    const isSingular = checkSingularity(this.baseState1.position, this.baseState1.velocity, this.baseState2.position, this.baseState2.velocity);
+    const isSingular = checkSingularity(this.baseState1.eci.position, this.baseState1.eci.velocity, this.baseState2.eci.position, this.baseState2.eci.velocity);
     
     if (isSingular) {
       // Execute WebWorker-ready 3D Monte Carlo

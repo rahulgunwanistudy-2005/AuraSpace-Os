@@ -10,44 +10,50 @@ export default function CommandCenter() {
   const isComputing = useStore((s) => s.isComputing);
   const computingLabel = useStore((s) => s.computingLabel);
 
-  const [alerts, setAlerts] = useState([
-    {
-      id: 'AURA-CRIT-001',
-      primary: 'AURA-1',
-      secondary: 'DEBRIS-327A',
-      tca: '4h 12m',
-      risk: 'CRITICAL',
-      confidence: 94,
-      action: 'REVIEW IMMEDIATELY',
-      reason: 'Low miss distance. High uncertainty. Rapid risk growth.',
-      selected: false,
-      visible: true
-    },
-    {
-      id: 'AURA-WARN-002',
-      primary: 'AURA-1',
-      secondary: 'OBJECT-901',
-      tca: '16h 45m',
-      risk: 'WARNING',
-      confidence: 82,
-      action: 'MONITOR',
-      reason: 'Tracking confidence degraded. Probability stable.',
-      selected: false,
-      visible: true
-    },
-    {
-      id: 'AURA-SAFE-003',
-      primary: 'AURA-1',
-      secondary: 'OBJECT-442',
-      tca: '27h 10m',
-      risk: 'SAFE',
-      confidence: 99,
-      action: 'IGNORE',
-      reason: 'Miss distance > 10km. No intersection in uncertainty volume.',
-      selected: false,
-      visible: true
-    }
-  ]);
+  const [alerts, setAlerts] = useState([]);
+
+  useEffect(() => {
+    // Fetch real CDMs from the backend
+    fetch('http://localhost:8000/api/v1/cdms')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.length > 0) {
+          const formattedAlerts = data.map((cdm, index) => {
+            const riskTier = cdm.collision_probability > 1e-4 ? 'CRITICAL' : 
+                             cdm.collision_probability > 1e-6 ? 'WARNING' : 'SAFE';
+            return {
+              id: cdm.message_id || `CDM-${index}`,
+              primary: cdm.primary_object.name || 'UNKNOWN',
+              secondary: cdm.secondary_object.name || 'UNKNOWN',
+              tca: new Date(cdm.tca).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+              risk: riskTier,
+              confidence: riskTier === 'CRITICAL' ? 94 : riskTier === 'WARNING' ? 82 : 99,
+              action: riskTier === 'CRITICAL' ? 'REVIEW IMMEDIATELY' : 'MONITOR',
+              reason: `Pc: ${cdm.collision_probability.toExponential(2)} | Miss Dist: ${cdm.miss_distance}m`,
+              selected: false,
+              visible: true
+            };
+          });
+          setAlerts(formattedAlerts);
+        } else {
+          // Fallback to demo data if backend is empty
+          setAlerts([
+            { id: 'AURA-CRIT-001', primary: 'AURA-1', secondary: 'DEBRIS-327A', tca: '4h 12m', risk: 'CRITICAL', confidence: 94, action: 'REVIEW IMMEDIATELY', reason: 'Low miss distance. High uncertainty. Rapid risk growth.', selected: false, visible: true },
+            { id: 'AURA-WARN-002', primary: 'AURA-1', secondary: 'OBJECT-901', tca: '16h 45m', risk: 'WARNING', confidence: 82, action: 'MONITOR', reason: 'Tracking confidence degraded. Probability stable.', selected: false, visible: true },
+            { id: 'AURA-SAFE-003', primary: 'AURA-1', secondary: 'OBJECT-442', tca: '27h 10m', risk: 'SAFE', confidence: 99, action: 'IGNORE', reason: 'Miss distance > 10km. No intersection in uncertainty volume.', selected: false, visible: true }
+          ]);
+        }
+      })
+      .catch(err => {
+        console.error('Failed to fetch CDMs:', err);
+        // Fallback to demo data on error
+        setAlerts([
+          { id: 'AURA-CRIT-001', primary: 'AURA-1', secondary: 'DEBRIS-327A', tca: '4h 12m', risk: 'CRITICAL', confidence: 94, action: 'REVIEW IMMEDIATELY', reason: 'Low miss distance. High uncertainty. Rapid risk growth.', selected: false, visible: true },
+          { id: 'AURA-WARN-002', primary: 'AURA-1', secondary: 'OBJECT-901', tca: '16h 45m', risk: 'WARNING', confidence: 82, action: 'MONITOR', reason: 'Tracking confidence degraded. Probability stable.', selected: false, visible: true },
+          { id: 'AURA-SAFE-003', primary: 'AURA-1', secondary: 'OBJECT-442', tca: '27h 10m', risk: 'SAFE', confidence: 99, action: 'IGNORE', reason: 'Miss distance > 10km. No intersection in uncertainty volume.', selected: false, visible: true }
+        ]);
+      });
+  }, []);
 
   const [liveStream, setLiveStream] = useState([
     { text: "SYSTEM INITIATED. MONITORING TRAFFIC.", type: "system" }

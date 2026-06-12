@@ -9,8 +9,13 @@ export function propagateTLE(tleLine1, tleLine2, targetDate) {
   
   if (!positionAndVelocity.position) return null;
   
+  const gmst = satellite.gstime(targetDate);
+  const positionEcf = satellite.eciToEcf(positionAndVelocity.position, gmst);
+  const velocityEcf = satellite.eciToEcf(positionAndVelocity.velocity, gmst);
+  
   return {
-    position: positionAndVelocity.position, // {x, y, z}
-    velocity: positionAndVelocity.velocity  // {x, y, z}
+    position: positionEcf, // {x, y, z} in ECF (km)
+    velocity: velocityEcf, // {x, y, z} in ECF (km/s)
+    eci: positionAndVelocity // Keep ECI for OrbitalEngine B-Plane math if needed
   };
 }

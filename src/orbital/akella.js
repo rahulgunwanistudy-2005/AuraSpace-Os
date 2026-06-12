@@ -50,7 +50,7 @@ export function run3DMonteCarlo(state1, state2, C1, C2, HBR) {
   
   // CWH parameters (using Mean Motion n of primary)
   const mu = 398600.4418; // Earth's gravitational parameter
-  const r1_mag = Math.sqrt(state1.position.x**2 + state1.position.y**2 + state1.position.z**2);
+  const r1_mag = Math.sqrt(state1.eci.position.x**2 + state1.eci.position.y**2 + state1.eci.position.z**2);
   const n = Math.sqrt(mu / Math.pow(r1_mag, 3));
   
   // Basic Box-Muller transform for Gaussian sampling
@@ -68,9 +68,9 @@ export function run3DMonteCarlo(state1, state2, C1, C2, HBR) {
     const dz = randomGaussian() * Math.sqrt(C1[2][2] + C2[2][2]);
     
     // Initial relative state perturbed
-    const x0 = (state1.position.x - state2.position.x) + dx;
-    const y0 = (state1.position.y - state2.position.y) + dy;
-    const z0 = (state1.position.z - state2.position.z) + dz;
+    const x0 = (state1.eci.position.x - state2.eci.position.x) + dx;
+    const y0 = (state1.eci.position.y - state2.eci.position.y) + dy;
+    const z0 = (state1.eci.position.z - state2.eci.position.z) + dz;
     
     const d = Math.sqrt(x0*x0 + y0*y0 + z0*z0);
     

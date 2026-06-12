@@ -5,7 +5,7 @@ import {
   ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import BPlaneVisualization from './BPlaneVisualization';
-import DecisionArena from './DecisionArena';
+
 
 export default function CommandDeckHUD() {
   const [navExpanded, setNavExpanded] = useState(true);
@@ -191,28 +191,24 @@ export default function CommandDeckHUD() {
             <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">DASHBOARD</span>
           </button>
           <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
+            <Box size={18} className="shrink-0" />
+            <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">CATALOG</span>
+          </button>
+          <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
+            <AlertCircle size={18} className="shrink-0" />
+            <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">CONJUNCTIONS</span>
+          </button>
+          <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
+            <Activity size={18} className="shrink-0" />
+            <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">OPERATIONS</span>
+          </button>
+          <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
             <Eye size={18} className="shrink-0" />
             <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">LIVE VIEW</span>
           </button>
           <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
-            <Box size={18} className="shrink-0" />
-            <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">OBJECTS</span>
-          </button>
-          <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
-            <Activity size={18} className="shrink-0" />
-            <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">ANALYSIS</span>
-          </button>
-          <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
-            <Cpu size={18} className="shrink-0" />
-            <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">AI ARENA</span>
-          </button>
-          <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
             <FileText size={18} className="shrink-0" />
             <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">REPORTS</span>
-          </button>
-          <button className="flex items-center gap-4 px-4 py-3 text-[#8a91a6] hover:text-white transition-colors w-full">
-            <Settings size={18} className="shrink-0" />
-            <span className="text-sm font-semibold whitespace-nowrap text-left overflow-hidden text-ellipsis">SETTINGS</span>
           </button>
         </div>
 
@@ -452,8 +448,9 @@ export default function CommandDeckHUD() {
 
               {/* Decision Arena (Burn Cards) */}
               <div className="flex flex-col flex-1 min-h-[250px]">
-                <DecisionArena scenario={scenario} selectedStrategy={selectedStrategy} onSelectStrategy={setSelectedStrategy} />
-              </div>
+                <div className="flex flex-col h-full items-center justify-center text-white/50 text-[10px] font-mono border border-dashed border-white/10 rounded-lg">
+                  [MANEUVER TRADESPACE ANALYSIS - PENDING IMPLEMENTATION]
+                </div>              </div>
 
               {/* B-Plane / Encounter Frame */}
               <div className={`dash-panel flex flex-col h-[200px] shrink-0 relative transition-opacity duration-700 ${advancedAnalysis ? 'opacity-100' : 'opacity-0 pointer-events-none hidden'}`}>

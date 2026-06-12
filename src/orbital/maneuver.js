@@ -25,8 +25,8 @@ function cross(v1, v2) {
  */
 export function simulateTrueManeuver(primaryState_TM, chaserState_TCA, deltaV_radial, deltaV_inTrack, deltaV_crossTrack, timeToTCA, cov3D) {
   
-  const r = primaryState_TM.position;
-  const v = primaryState_TM.velocity;
+  const r = primaryState_TM.eci.position;
+  const v = primaryState_TM.eci.velocity;
   
   const r_hat = normalize(r);
   const h_vec = cross(r, v);
@@ -50,7 +50,7 @@ export function simulateTrueManeuver(primaryState_TM, chaserState_TCA, deltaV_ra
   const postBurnTcaState = propagateRK4(r, newV, timeToTCA);
   
   // Compute new B-Plane
-  const bp = computeBPlane(postBurnTcaState.position, postBurnTcaState.velocity, chaserState_TCA.position, chaserState_TCA.velocity, cov3D);
+  const bp = computeBPlane(postBurnTcaState.position, postBurnTcaState.velocity, chaserState_TCA.eci.position, chaserState_TCA.eci.velocity, cov3D);
   
   return {
     mu: bp.mu,
