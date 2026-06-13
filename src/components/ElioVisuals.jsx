@@ -2,6 +2,7 @@ import React, { useRef, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Html } from '@react-three/drei';
 import * as THREE from 'three';
+import { useStore } from '../state/store';
 
 // --- Energy Ribbon ---
 const ribbonVertexShader = `
@@ -26,6 +27,7 @@ const ribbonFragmentShader = `
     
     // Core glow and edge fading
     float edgeFade = sin(vUv.y * 3.14159);
+    edgeFade = pow(edgeFade, 2.0); // Sharper core
     
     // Create pulses
     float pulse = smoothstep(0.4, 0.6, scroll) * smoothstep(0.8, 0.6, scroll);
@@ -33,9 +35,11 @@ const ribbonFragmentShader = `
     // Fade out at ends
     float endFade = smoothstep(0.0, 0.1, vUv.x) * smoothstep(1.0, 0.9, vUv.x);
     
-    float alpha = pulse * edgeFade * endFade * opacityBase;
+    // Additive base glow + high-intensity pulse for bloom
+    float alpha = (pulse * 2.0 + 0.3) * edgeFade * endFade * opacityBase;
     
-    gl_FragColor = vec4(color, alpha * 0.8);
+    // Overbright color for HDR bloom effect
+    gl_FragColor = vec4(color * (1.0 + pulse * 1.5), alpha);
   }
 `;
 
@@ -142,27 +146,36 @@ export function CollisionCorridor({ startPos, endPos, color, thickness }) {
   const midpointVec = useRef(new THREE.Vector3());
   const dirVec = useRef(new THREE.Vector3());
   const upVec = useRef(new THREE.Vector3(0, 1, 0));
+  const activeAiEvent = useStore(s => s.activeAiEvent);
   
   const distance = useMemo(() => startPos.distanceTo(endPos), [startPos, endPos]);
+  const isAnalyzing = activeAiEvent === 'ANALYSIS';
   
-  useFrame(() => {
+  useFrame((state) => {
     if (meshRef.current) {
       midpointVec.current.addVectors(startPos, endPos).multiplyScalar(0.5);
       meshRef.current.position.copy(midpointVec.current);
       dirVec.current.subVectors(endPos, startPos).normalize();
       meshRef.current.quaternion.setFromUnitVectors(upVec.current, dirVec.current);
+      
+      // Radar scan pulse effect during AI Analysis
+      if (isAnalyzing) {
+        meshRef.current.material.opacity = 0.3 + Math.sin(state.clock.elapsedTime * 8) * 0.2;
+      } else {
+        meshRef.current.material.opacity = 0.3;
+      }
     }
   });
 
   return (
     <group>
       <mesh ref={meshRef}>
-        <cylinderGeometry args={[thickness, thickness, distance, 16, 1, true]} />
-        <meshBasicMaterial color={color} transparent opacity={0.3} depthWrite={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
+        <cylinderGeometry args={[thickness * (isAnalyzing ? 1.5 : 1.0), thickness * (isAnalyzing ? 1.5 : 1.0), distance, 16, 1, true]} />
+        <meshBasicMaterial color={isAnalyzing ? '#00f0ff' : color} transparent opacity={0.3} depthWrite={false} blending={THREE.AdditiveBlending} side={THREE.DoubleSide} />
       </mesh>
       <Html position={startPos.clone().lerp(endPos, 0.5).add(new THREE.Vector3(0, 0.2, 0))} center className="pointer-events-none z-10">
-        <div className="bg-[#ff003c]/20 border border-[#ff003c] text-[#ff003c] px-2 py-1 text-[10px] font-bold tracking-widest uppercase rounded whitespace-nowrap backdrop-blur-md opacity-80">
-          HIGH RISK REGION
+        <div className={`border px-2 py-1 text-[10px] font-bold tracking-widest uppercase rounded whitespace-nowrap backdrop-blur-md transition-all ${isAnalyzing ? 'bg-[#00f0ff]/20 border-[#00f0ff] text-[#00f0ff] shadow-[0_0_15px_#00f0ff]' : 'bg-[#ff003c]/20 border-[#ff003c] text-[#ff003c]'}`}>
+          {isAnalyzing ? 'RUNNING MONTE CARLO SIM...' : 'HIGH RISK REGION'}
         </div>
       </Html>
     </group>

@@ -20,28 +20,60 @@ class TLEObject(BaseModel):
     tle_line1: str
     tle_line2: str
 
-# Mocked TLE Database for Phase 1
-MOCK_TLES = [
-    TLEObject(
-        norad_id="25544",
-        name="ISS (ZARYA)",
-        tle_line1="1 25544U 98067A   26161.50000000  .00010000  00000-0  10000-3 0  9998",
-        tle_line2="2 25544  51.6400  10.0000 0001000  20.0000 340.0000 15.50000000000001"
-    ),
-    TLEObject(
-        norad_id="43013",
-        name="NOAA 20",
-        tle_line1="1 43013U 17073A   26161.50000000  .00000100  00000-0  10000-4 0  9998",
-        tle_line2="2 43013  98.7000  20.0000 0001000  30.0000 330.0000 14.20000000000001"
-    )
-]
+import urllib.request
+import json
+
+_cached_catalog = None
+_cache_time = None
+
+@app.get("/api/v1/catalog")
+async def get_catalog():
+    """
+    Returns active satellite data from CelesTrak.
+    Uses a simple cache to avoid spamming the API.
+    """
+    global _cached_catalog, _cache_time
+    now = datetime.datetime.utcnow()
+    
+    # Return cache if less than 1 hour old
+    if _cached_catalog and _cache_time and (now - _cache_time).total_seconds() < 3600:
+        return _cached_catalog
+
+    try:
+        url = "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=json"
+        req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req) as response:
+            data = json.loads(response.read().decode())
+            
+            # Filter and parse the first 200 items to keep the UI responsive
+            catalog = []
+            for item in data[:200]:
+                catalog.append({
+                    "norad_id": str(item.get("NORAD_CAT_ID", "")),
+                    "name": item.get("OBJECT_NAME", "UNKNOWN"),
+                    "type": item.get("OBJECT_TYPE", "PAYLOAD"),
+                    "inclination": item.get("INCLINATION", 0),
+                    "apogee": item.get("APOGEE", 0),
+                    "perigee": item.get("PERIGEE", 0),
+                    "period": item.get("PERIOD", 0),
+                    "status": "NOMINAL" if item.get("OBJECT_TYPE") == "PAYLOAD" else "DEAD"
+                })
+            
+            _cached_catalog = catalog
+            _cache_time = now
+            return catalog
+    except Exception as e:
+        # Fallback if network fails
+        if _cached_catalog:
+            return _cached_catalog
+        raise HTTPException(status_code=503, detail=f"Failed to fetch catalog from CelesTrak: {str(e)}")
 
 @app.get("/api/v1/tles", response_model=List[TLEObject])
 async def get_tles():
     """
-    Returns active TLEs for the catalog.
+    Legacy TLE endpoint (deprecated).
     """
-    return MOCK_TLES
+    return []
 
 from cdm_parser import parse_ccsds_cdm
 from gemini_agent import evaluate_cdm_with_gemini
@@ -54,12 +86,12 @@ class RawCDMRequest(BaseModel):
 ACTIVE_CDMS = [{
     "message_id": "CDM-2026-0612-A1",
     "creation_date": "2026-06-12T12:00:00Z",
-    "tca": "2026-06-14T18:30:00Z",
-    "miss_distance": 421.0,
+    "tca": "2026-06-14T12:45:32Z",
+    "miss_distance": 0.087,
     "relative_velocity": 8.4,
-    "collision_probability": 0.000211,
+    "collision_probability": 5.653e-4,
     "primary_object": {"name": "AURA-1", "norad_id": "2025-A1-001"},
-    "secondary_object": {"name": "DEBRIS-ROCK-7721", "norad_id": "1998-ROCK-7721"}
+    "secondary_object": {"name": "COMM SAT VS ROCKET BODY (DEBRIS)", "norad_id": "1098-ROCK-7721"}
 }]
 
 @app.post("/api/v1/cdms/ingest")
@@ -97,6 +129,53 @@ async def evaluate_cdm(message_id: str):
         
     evaluation = evaluate_cdm_with_gemini(target_cdm)
     return evaluation
+
+@app.get("/api/v1/operations")
+async def get_operations():
+    """
+    Returns upcoming orbital operations and maneuvers.
+    """
+    now = datetime.datetime.utcnow()
+    return [
+        {
+            "id": "OP-2026-0614-01",
+            "type": "COLLISION_AVOIDANCE",
+            "asset": "AURA-1",
+            "delta_v": "2.45 m/s",
+            "scheduled_time": (now + datetime.timedelta(hours=11, minutes=20)).isoformat() + "Z",
+            "status": "PENDING_APPROVAL"
+        },
+        {
+            "id": "OP-2026-0615-02",
+            "type": "STATION_KEEPING",
+            "asset": "AURA-2",
+            "delta_v": "0.12 m/s",
+            "scheduled_time": (now + datetime.timedelta(days=2)).isoformat() + "Z",
+            "status": "SCHEDULED"
+        }
+    ]
+
+@app.get("/api/v1/reports")
+async def get_reports():
+    """
+    Returns historical maneuver logs and monte carlo debriefs.
+    """
+    return [
+        {
+            "id": "REP-2026-05",
+            "title": "AURA-1 May 2026 Monthly Debrief",
+            "date": "2026-06-01T00:00:00Z",
+            "summary": "Executed 2 collision avoidance maneuvers. Expended 4.1 m/s total Delta-V. Overall risk profile maintained below 1e-4 threshold.",
+            "tags": ["MONTHLY", "NOMINAL"]
+        },
+        {
+            "id": "REP-2026-0610",
+            "title": "Monte Carlo Analysis: 1098-ROCK",
+            "date": "2026-06-10T14:30:00Z",
+            "summary": "10,000 iterations completed. Highest probability of collision detected at cross-track node. Maneuver executed successfully.",
+            "tags": ["ANALYSIS", "ACTION_TAKEN"]
+        }
+    ]
 
 @app.get("/health")
 async def health_check():

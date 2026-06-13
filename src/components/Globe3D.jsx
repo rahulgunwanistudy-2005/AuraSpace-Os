@@ -34,6 +34,9 @@ export default function Globe3D({ scenario }) {
   const lightingMode = useStore(s => s.lightingMode);
   const engineState = useStore(s => s.engineState);
   const targetMissDistance = useStore(s => s.targetMissDistance);
+  const appView = useStore(s => s.appView);
+  const hoveredObject = useStore(s => s.hoveredObject);
+  const activeTimelineIdx = useStore(s => s.activeTimelineIdx);
 
   const [colorMap, normalMap, specularMap, cloudsMap, nightMap] = useTexture([
     '/textures/earth_diffuse.jpg',
@@ -53,9 +56,12 @@ export default function Globe3D({ scenario }) {
 
     if (customMaterialRef.current?.userData?.shader) {
       const isCinematic = lightingMode === 'CINEMATIC';
-      const targetSunDir = isCinematic 
-        ? new THREE.Vector3(-20, 5, -15).normalize() 
-        : new THREE.Vector3(-10, 5, 10).normalize();
+      const isDashboard = appView === 'DASHBOARD';
+      const targetSunDir = isDashboard 
+        ? new THREE.Vector3(20, 15, -20).normalize() // Deep night, backlit rim
+        : (isCinematic 
+          ? new THREE.Vector3(-20, 5, -15).normalize() 
+          : new THREE.Vector3(-10, 5, 10).normalize());
       
       customMaterialRef.current.userData.shader.uniforms.sunDirection.value.lerp(targetSunDir, delta * 2);
       customMaterialRef.current.userData.shader.uniforms.time.value = state.clock.elapsedTime;
@@ -278,7 +284,7 @@ export default function Globe3D({ scenario }) {
               vec4 nightColor = texture2D(tNight, vMapUv);
               // Crush the blacks so oceans stay dark, boost the brights for warm amber lights
               vec3 crushedNight = pow(nightColor.rgb, vec3(2.0));
-              vec3 cityLights = crushedNight * vec3(1.0, 0.8, 0.4) * 6.0; 
+              vec3 cityLights = crushedNight * vec3(1.0, 0.85, 0.5) * 12.0; 
               // Fade lights in gracefully as it enters twilight
               totalEmissiveRadiance += cityLights * (1.0 - smoothstep(-0.15, 0.1, intensity));
 
@@ -396,16 +402,16 @@ export default function Globe3D({ scenario }) {
       
       {/* Elio-Style Trajectory Ribbons */}
       {showSafeOrbit ? (
-        <EnergyRibbon points={orbit1} color="#ff003c" speed={0.5} direction={1.0} radius={0.01} />
+        <EnergyRibbon points={orbit1} color="#ff003c" speed={0.5} direction={1.0} radius={0.01} opacity={0.3} />
       ) : (
-        <EnergyRibbon points={orbit1} color="#00f0ff" speed={2.0} direction={1.0} radius={0.015} />
+        <EnergyRibbon points={orbit1} color="#00f0ff" speed={hoveredObject === 'PRIMARY' ? 4.0 : 2.0} direction={1.0} radius={hoveredObject === 'PRIMARY' ? 0.025 : 0.015} opacity={hoveredObject === 'PRIMARY' ? 1.5 : 1.0} />
       )}
       
       {showSafeOrbit && orbit1Safe && (
         <EnergyRibbon points={orbit1Safe} color="#00d084" speed={3.0} direction={1.0} radius={0.02} />
       )}
 
-      <EnergyRibbon points={orbit2} color={scenario.tier === 'Critical' ? '#ff003c' : '#ffb400'} speed={2.0} direction={1.0} radius={0.015} />
+      <EnergyRibbon points={orbit2} color={scenario.tier === 'Critical' ? '#ff003c' : '#ffb400'} speed={hoveredObject === 'SECONDARY' ? 4.0 : 2.0} direction={1.0} radius={hoveredObject === 'SECONDARY' ? 0.025 : 0.015} opacity={hoveredObject === 'SECONDARY' ? 1.5 : 1.0} />
 
       {/* Shadow Paths for Debris Uncertainty */}
       {showMonteCarlo && shadowPaths.map((path, i) => (
@@ -414,11 +420,11 @@ export default function Globe3D({ scenario }) {
 
       {/* AAA Hero Satellites / Debris Models */}
       <group ref={sat1Group}>
-        <AuraSatellite scale={0.06} isBurning={isBurning} />
+        <AuraSatellite scale={0.06} isBurning={isBurning} showLabel={appView === 'DASHBOARD'} />
       </group>
       
       <group ref={sat2Group}>
-        <DebrisObject scale={0.04} />
+        <DebrisObject scale={0.04} showLabel={appView === 'DASHBOARD'} />
         
         {showMonteCarlo && (
           <MonteCarloCloud position={[0, 0, 0]} count={10000} isCritical={scenario.tier === 'Critical'} />

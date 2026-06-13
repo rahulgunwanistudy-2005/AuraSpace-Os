@@ -129,7 +129,7 @@ export default function CommandCenter() {
     if (alert.risk === 'CRITICAL') {
       setAlerts(prev => prev.map(a => a.id === alert.id ? { ...a, selected: true } : a));
       setTimeout(() => {
-        setAppView('INVESTIGATION');
+        setAppView('DASHBOARD');
       }, 1500);
     }
   };

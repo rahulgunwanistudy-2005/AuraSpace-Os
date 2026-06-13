@@ -13,7 +13,7 @@ import CommandDeckHUD from './components/CommandDeckHUD';
 import NarrativeOverlay from './components/NarrativeOverlay';
 
 
-
+import DashboardView from './components/DashboardView';
 import CommandCenter from './components/CommandCenter';
 
 export default function App() {
@@ -42,7 +42,6 @@ export default function App() {
   return (
     <div className="w-screen h-screen bg-black overflow-hidden relative font-sans text-white select-none">
       {/* ═══ FULLSCREEN 3D SCENE ═══ */}
-      {/* The 3D scene is always mounted in the background to ensure instantaneous transition */}
       <Canvas
         camera={{ position: [0, 2, 20], fov: 45 }}
         gl={{ 
@@ -73,11 +72,10 @@ export default function App() {
         </EffectComposer>
       </Canvas>
 
-      {appView === 'COMMAND_CENTER' ? (
-        <CommandCenter />
-      ) : (
-        <CommandDeckHUD />
-      )}
+      {/* ═══ VIEW ROUTING ═══ */}
+      {appView === 'COMMAND_CENTER' && <CommandCenter />}
+      {appView === 'DASHBOARD' && <DashboardView />}
+      {appView === 'INVESTIGATION' && <CommandDeckHUD />}
       
       {/* ═══ HTML OVERLAY LAYER ═══ */}
       <NarrativeOverlay />

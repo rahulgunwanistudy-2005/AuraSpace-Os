@@ -127,6 +127,7 @@ function ConfidenceShell({ scaleArgs, color, opacity, text, textY, fontSize }) {
 export default function MonteCarloCloud({ position, scale = 1.0, isCritical = false }) {
   const groupRef = useRef();
   const targetConfidence = useStore(s => s.targetConfidence);
+  const activeTimelineIdx = useStore(s => s.activeTimelineIdx);
   const currentScaleRef = useRef(1.0);
 
   useFrame((state, delta) => {
@@ -134,9 +135,15 @@ export default function MonteCarloCloud({ position, scale = 1.0, isCritical = fa
       groupRef.current.rotation.y += delta * 0.1;
       groupRef.current.rotation.z += delta * 0.05;
       
+      // Uncertainty shrinks as timeline approaches execution (idx 5)
+      // T-72h (idx 0) = max scale. T-0h (idx 5) = min scale.
+      const timelineFactor = Math.max(0, (5 - activeTimelineIdx) * 0.5);
+      
       // Confidence 30 -> large scale (e.g., 3.0)
       // Confidence 99.9 -> small scale (e.g., 1.0)
-      const targetScale = 1.0 + ((100 - targetConfidence) / 70) * 2.0;
+      const baseScale = 1.0 + ((100 - targetConfidence) / 70) * 2.0;
+      
+      const targetScale = baseScale + timelineFactor;
       currentScaleRef.current = THREE.MathUtils.lerp(currentScaleRef.current, targetScale, 0.05);
       
       const finalScale = currentScaleRef.current * scale;

@@ -54,11 +54,24 @@ export const useStore = create((set, get) => ({
   },
 
   // ═══ APP PHASE ═══
-  appView: 'COMMAND_CENTER', // 'COMMAND_CENTER' | 'INVESTIGATION'
+  appView: 'COMMAND_CENTER', // 'COMMAND_CENTER' | 'DASHBOARD' | 'INVESTIGATION'
   setAppView: (appView) => set({ appView }),
   
   orbState: 'IDLE',
   setOrbState: (orbState) => set({ orbState }),
+
+  // ═══ HOVER STATE & V3 INTERACTION ═══
+  hoveredObject: null, // 'PRIMARY' | 'SECONDARY' | null
+  setHoveredObject: (hoveredObject) => set({ hoveredObject }),
+
+  activeTimelineIdx: 3, // T-12h Default
+  setActiveTimelineIdx: (activeTimelineIdx) => set({ activeTimelineIdx }),
+
+  cameraTarget: 'EARTH', // 'EARTH' | 'PRIMARY' | 'SECONDARY' | 'TCA'
+  setCameraTarget: (cameraTarget) => set({ cameraTarget }),
+
+  activeAiEvent: null, // Track specific AI events to trigger visual pulses
+  setActiveAiEvent: (activeAiEvent) => set({ activeAiEvent }),
 
   // ═══ LOADING / COMPUTING STATE ═══
   isComputing: false,
@@ -152,10 +165,9 @@ export const useStore = create((set, get) => ({
       set({ judgeModeStep: 5, isComputing: false, computingLabel: '' });
     }, 15000);
 
-    // Step 6: AppView switches to INVESTIGATION and Sequence begins
+    // Step 6: AppView switches to DASHBOARD
     const t5 = setTimeout(() => {
-      set({ appView: 'INVESTIGATION' });
-      get().activateCopilot();
+      set({ appView: 'DASHBOARD', judgeModeActive: false, judgeModeStep: 0, immersiveMode: false, isComputing: false, computingLabel: '' });
     }, 17000);
 
     set({ sequenceTimeouts: [t1, t2, t3, t4, t5] });
