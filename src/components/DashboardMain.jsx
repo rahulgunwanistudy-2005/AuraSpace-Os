@@ -38,7 +38,7 @@ const IntelligenceFeedItem = ({ item, onHoverStart, onHoverEnd }) => (
 export default function DashboardMain({ parallaxX, parallaxY, reverseParallaxY, reverseParallaxX }) {
   const scenario = useStore((s) => s.scenario);
   const engineState = useStore((s) => s.engineState);
-  const setAppView = useStore((s) => s.setAppView);
+  const setActiveDashboardTab = useStore((s) => s.setActiveDashboardTab);
   
   const setHoveredObject = useStore((s) => s.setHoveredObject);
   const activeTimelineIdx = useStore((s) => s.activeTimelineIdx);
@@ -273,7 +273,7 @@ export default function DashboardMain({ parallaxX, parallaxY, reverseParallaxY, 
             <motion.button
               whileHover={{ scale: 1.02, boxShadow: '0 0 20px rgba(157, 141, 241, 0.4)' }}
               whileTap={{ scale: 0.98 }}
-              onClick={() => { setAppView('INVESTIGATION'); setCameraTarget('TCA'); }}
+              onClick={() => { setActiveDashboardTab('investigation'); setCameraTarget('TCA'); }}
               className="mt-6 w-full py-3 rounded-lg text-xs font-bold tracking-widest uppercase transition-colors bg-[#9d8df1] hover:bg-[#a698f2] text-white"
             >
               View Detailed Analysis
@@ -357,7 +357,7 @@ export default function DashboardMain({ parallaxX, parallaxY, reverseParallaxY, 
                   <motion.button
                     whileHover={{ scale: 1.02, boxShadow: '0 0 15px rgba(157, 141, 241, 0.3)' }}
                     whileTap={{ scale: 0.98 }}
-                    onClick={() => { setAppView('INVESTIGATION'); setCameraTarget('TCA'); }}
+                    onClick={() => { setActiveDashboardTab('investigation'); setCameraTarget('TCA'); }}
                     className="flex items-center gap-2 px-5 py-2 rounded-lg text-xs font-bold tracking-widest uppercase bg-[#9d8df1] text-white"
                   >
                     <Zap size={14} />

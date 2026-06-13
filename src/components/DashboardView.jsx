@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '../state/store';
 import { motion, useMotionValue, useTransform, AnimatePresence } from 'framer-motion';
-import { LayoutDashboard, Box, AlertTriangle, Cog, Eye, FileText, Settings, Radio } from 'lucide-react';
+import { LayoutDashboard, Box, AlertTriangle, Cog, Eye, FileText, Settings, Radio, Activity } from 'lucide-react';
 import DashboardMain from './DashboardMain';
 import CatalogView from './CatalogView';
 import ConjunctionsView from './ConjunctionsView';
@@ -9,11 +9,13 @@ import OperationsView from './OperationsView';
 import LiveView from './LiveView';
 import ReportsView from './ReportsView';
 import SettingsView from './SettingsView';
+import InvestigationView from './InvestigationView';
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { id: 'catalog', label: 'Catalog', icon: Box },
   { id: 'conjunctions', label: 'Conjunctions', icon: AlertTriangle },
+  { id: 'investigation', label: 'Investigation', icon: Activity },
   { id: 'operations', label: 'Operations', icon: Cog },
   { id: 'liveview', label: 'Live View', icon: Eye },
   { id: 'reports', label: 'Reports', icon: FileText },
@@ -21,7 +23,8 @@ const NAV_ITEMS = [
 ];
 
 export default function DashboardView() {
-  const [activeNav, setActiveNav] = useState('dashboard');
+  const activeNav = useStore((s) => s.activeDashboardTab);
+  const setActiveNav = useStore((s) => s.setActiveDashboardTab);
   const engineState = useStore((s) => s.engineState);
   
   // Parallax Mouse Tracking (Passed down to children if needed)
@@ -58,40 +61,45 @@ export default function DashboardView() {
 
           <div className="flex flex-col gap-1">
             <span className="text-[9px] text-[#6b7280] uppercase tracking-widest px-2 mb-2 font-bold">Menu</span>
-            {NAV_ITEMS.map(item => {
-              const Icon = item.icon;
+            {NAV_ITEMS.map((item) => {
               const isActive = activeNav === item.id;
+              const Icon = item.icon;
               return (
                 <button
                   key={item.id}
                   onClick={() => setActiveNav(item.id)}
-                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-left group ${isActive ? 'bg-[#9d8df1]/10 text-white' : 'text-[#6b7280] hover:bg-white/5 hover:text-white'}`}
-                  style={{
-                    border: isActive ? '1px solid rgba(157, 141, 241, 0.3)' : '1px solid transparent',
-                    boxShadow: isActive ? 'inset 0 0 10px rgba(157, 141, 241, 0.1)' : 'none'
-                  }}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group ${isActive ? 'bg-[#9d8df1]/10 text-white shadow-[inset_2px_0_0_#9d8df1]' : 'text-[#8a91a6] hover:bg-[#1e2433] hover:text-white'}`}
                 >
-                  <Icon size={16} className={isActive ? 'text-[#9d8df1]' : 'group-hover:text-white transition-colors'} />
-                  <span className="text-xs font-semibold tracking-wider">{item.label}</span>
-                  {isActive && <motion.div layoutId="navIndicator" className="absolute left-0 w-1 h-6 bg-[#9d8df1] rounded-r" />}
+                  <Icon size={18} className={`${isActive ? 'text-[#9d8df1]' : 'text-[#6b7280] group-hover:text-white'} transition-colors duration-200`} />
+                  <span className={`text-xs font-bold tracking-wider ${isActive ? 'text-white' : ''}`}>{item.label}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* System Status */}
-        <div className="mt-auto px-4 py-4 rounded-xl border border-[#1e2433] bg-[#080c16]/50">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="w-2 h-2 rounded-full bg-[#00d084] animate-pulse shadow-[0_0_8px_#00d084]" />
-            <span className="text-[9px] text-[#6b7280] uppercase tracking-widest font-bold">System Status</span>
-          </div>
-          <div className="text-sm font-bold text-white tracking-widest">NOMINAL</div>
-          <div className="text-[10px] text-[#6b7280] mt-1">All systems operational</div>
-          
-          <div className="mt-4 pt-4 border-t border-[#1e2433] flex items-center justify-between">
-            <span className="text-[9px] font-mono text-[#6b7280]">LATENCY</span>
-            <span className="text-[10px] font-mono font-bold text-[#00d084]">12ms</span>
+        {/* Global Connection Status */}
+        <div className="mt-auto px-2">
+          <div className="bg-[#080c16] rounded-xl p-4 border border-[#1e2433] flex flex-col gap-3 relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-[1px] bg-gradient-to-r from-transparent via-[#00d084] to-transparent opacity-50" />
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-[#6b7280] uppercase tracking-widest font-bold">Data Link</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-[#00d084] animate-pulse" />
+                <span className="text-[10px] font-bold text-[#00d084]">NOMINAL</span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className="flex items-center justify-between text-[10px] font-mono text-[#8a91a6]">
+                <span>UP</span>
+                <span className="text-white">1.4 GB/s</span>
+              </div>
+              <div className="flex items-center justify-between text-[10px] font-mono text-[#8a91a6]">
+                <span>DN</span>
+                <span className="text-white">3.2 GB/s</span>
+              </div>
+            </div>
+            <div className="h-6 w-full opacity-30 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMjAiPjxwYXRoIGQ9Ik0wLDEwIFEyNSwwIDUwLDEwIFQxMDAsMTAiIGZpbGw9Im5vbmUiIHN0cm9rZT0iIzAwZDA4NCIgc3Ryb2tlLXdpZHRoPSIxIi8+PC9zdmc+')] bg-cover bg-no-repeat bg-center" />
           </div>
         </div>
       </motion.div>
@@ -131,6 +139,7 @@ export default function DashboardView() {
           {activeNav === 'dashboard' && <DashboardMain key="dashboard" parallaxX={parallaxX} parallaxY={parallaxY} reverseParallaxX={reverseParallaxX} reverseParallaxY={reverseParallaxY} />}
           {activeNav === 'catalog' && <CatalogView key="catalog" parallaxX={parallaxX} parallaxY={parallaxY} />}
           {activeNav === 'conjunctions' && <ConjunctionsView key="conjunctions" parallaxX={parallaxX} parallaxY={parallaxY} />}
+          {activeNav === 'investigation' && <InvestigationView key="investigation" parallaxX={parallaxX} parallaxY={parallaxY} />}
           {activeNav === 'operations' && <OperationsView key="operations" parallaxX={parallaxX} parallaxY={parallaxY} />}
           {activeNav === 'liveview' && <LiveView key="liveview" parallaxX={parallaxX} parallaxY={parallaxY} />}
           {activeNav === 'reports' && <ReportsView key="reports" parallaxX={parallaxX} parallaxY={parallaxY} />}

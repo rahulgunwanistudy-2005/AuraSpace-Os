@@ -201,7 +201,8 @@ export default function CommandCenter() {
               if (!alert.visible) return null;
               
               // CSS animation for Step 5 transition
-              const isDetached = judgeModeActive && judgeModeStep >= 5 && alert.risk === 'CRITICAL';
+              const isDetached = false; // User requested static layout, disable detachment
+              const isHighlighted = judgeModeActive && judgeModeStep >= 5 && alert.risk === 'CRITICAL';
               const isFadingOut = judgeModeActive && judgeModeStep >= 5 && alert.risk !== 'CRITICAL';
 
               return (
@@ -212,11 +213,10 @@ export default function CommandCenter() {
                     ${alert.risk === 'CRITICAL' ? 'bg-[#1e0a0a] border-[#ff003c]/50 hover:bg-[#2a0f0f]' : 
                       alert.risk === 'WARNING' ? 'bg-[#1a150a] border-[#ffb400]/50 hover:bg-[#261f0f]' : 
                       'bg-[#070b14] border-[#2a2f3a] hover:bg-[#13161f]'}
-                    ${alert.selected ? 'ring-1 ring-white' : ''}
+                    ${alert.selected || isHighlighted ? 'ring-1 ring-white shadow-lg shadow-[#ff003c]/20' : ''}
                     
-                    animate-fade-in-up transition-all duration-[1200ms] ease-[cubic-bezier(0.16,1,0.3,1)]
+                    animate-fade-in-up transition-all duration-500
                     
-                    ${isDetached ? 'fixed z-[200] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 scale-125 shadow-2xl shadow-[#ff003c]/20' : ''}
                     ${isFadingOut ? 'opacity-0 translate-y-10' : 'opacity-100'}
                   `}
                 >
@@ -224,23 +224,25 @@ export default function CommandCenter() {
                     <div className="absolute top-0 right-0 w-24 h-24 bg-[#ff003c]/10 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 animate-pulse"></div>
                   )}
 
-                  <div className="flex justify-between items-start mb-3 relative z-10">
-                    <div className="flex items-center gap-3">
-                      {alert.risk === 'CRITICAL' ? <ShieldAlert size={18} className="text-[#ff003c]" /> :
-                       alert.risk === 'WARNING' ? <AlertCircle size={18} className="text-[#ffb400]" /> :
-                       <CheckCircle2 size={18} className="text-[#00d084]" />}
+                  <div className="flex justify-between items-start mb-3 relative z-10 gap-2 min-w-0">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="shrink-0">
+                        {alert.risk === 'CRITICAL' ? <ShieldAlert size={18} className="text-[#ff003c]" /> :
+                         alert.risk === 'WARNING' ? <AlertCircle size={18} className="text-[#ffb400]" /> :
+                         <CheckCircle2 size={18} className="text-[#00d084]" />}
+                      </div>
                       
-                      <div className="flex flex-col">
-                        <div className="flex items-center gap-2">
-                          <span className="text-sm font-bold">{alert.primary}</span>
-                          <span className="text-[#8a91a6] text-xs">vs</span>
-                          <span className="text-sm font-bold">{alert.secondary}</span>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5 overflow-hidden">
+                          <span className="text-sm font-bold truncate shrink-0 max-w-[40%]">{alert.primary}</span>
+                          <span className="text-[#8a91a6] text-xs shrink-0">vs</span>
+                          <span className="text-sm font-bold truncate min-w-0">{alert.secondary}</span>
                         </div>
-                        <span className="text-[10px] text-[#8a91a6] mt-0.5">ID: {alert.id}</span>
+                        <span className="text-[10px] text-[#8a91a6] mt-0.5 truncate">ID: {alert.id}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end">
+                    <div className="flex flex-col items-end shrink-0 pl-2">
                       <span className="text-sm font-bold font-mono text-[#f5a623]">{alert.tca}</span>
                       <span className="text-[9px] tracking-widest text-[#8a91a6] uppercase">TCA</span>
                     </div>

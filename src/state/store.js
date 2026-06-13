@@ -53,9 +53,15 @@ export const useStore = create((set, get) => ({
     set({ engineState });
   },
 
-  // ═══ APP PHASE ═══
+  // ═══ APP STATE ═══
   appView: 'COMMAND_CENTER', // 'COMMAND_CENTER' | 'DASHBOARD' | 'INVESTIGATION'
   setAppView: (appView) => set({ appView }),
+  
+  activeDashboardTab: 'dashboard',
+  setActiveDashboardTab: (activeDashboardTab) => set({ activeDashboardTab }),
+
+  immersiveMode: false,
+  toggleImmersive: () => set(s => ({ immersiveMode: !s.immersiveMode })),
   
   orbState: 'IDLE',
   setOrbState: (orbState) => set({ orbState }),

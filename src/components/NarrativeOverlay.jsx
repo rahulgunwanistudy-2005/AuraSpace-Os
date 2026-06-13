@@ -58,7 +58,7 @@ export default function NarrativeOverlay() {
 
   return (
     <div className="absolute inset-0 flex items-start justify-center pointer-events-none z-[200]" style={{ paddingTop: '22%' }}>
-      <div className="font-mono text-xl md:text-3xl font-bold tracking-[0.2em] text-white whitespace-pre-wrap leading-relaxed animate-fade-in uppercase text-center px-10 py-6 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 drop-shadow-[0_0_30px_rgba(0,0,0,1)] max-w-[80vw]">
+      <div className="font-mono text-lg md:text-xl font-bold tracking-[0.2em] text-white whitespace-pre-wrap leading-relaxed animate-fade-in uppercase text-center px-6 py-4 bg-black/60 backdrop-blur-md rounded-2xl border border-white/10 drop-shadow-[0_0_30px_rgba(0,0,0,1)] max-w-[50vw]">
         {displayedText}
         <span className="animate-pulse">_</span>
       </div>
