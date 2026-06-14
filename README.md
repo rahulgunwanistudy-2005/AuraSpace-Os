@@ -41,15 +41,9 @@ echo "GEMINI_API_KEY=..." > .env                  # only the Gemini endpoints ne
 uvicorn main:app --reload --port 8000
 ```
 
-In prod the frontend calls `/api/v1/...` same-origin. Locally the backend is on `:8000`,
-so point the frontend at it with a `.env` at the repo root:
-
-```
-VITE_API_BASE=http://localhost:8000
-```
-
-…and have the fetch calls read it (`import.meta.env.VITE_API_BASE ?? ''`) instead of a
-hardcoded host. See the note in *Rough edges* — the committed components don't do this yet.
+In prod the frontend calls `/api/v1/...` same-origin. Locally the backend runs on `:8000`
+and the components currently have that hardcoded — so local dev works as-is without any
+extra config.
 
 ## What needs the backend
 
@@ -117,20 +111,26 @@ backend/
   gemini_agent.py  Gemini reasoning (needs GEMINI_API_KEY)
 ```
 
-## Rough edges
+## Roadmap — next round
 
-- **Hardcoded API host.** Several components still fetch `http://localhost:8000` directly.
-  That works in local dev but not against the same-origin `/api` deploy — those views serve
-  demo fallbacks in prod until the calls are switched to relative `/api/...` (or routed
-  through `VITE_API_BASE`). The committed `vercel.json` also doesn't include the rewrite/
-  function config that the live `/api` routing depends on.
-- **Backend state is in-memory.** Ingested CDMs, the agent log, the catalog cache, and the
-  escalation set all live in module globals. On Vercel's serverless functions that state is
-  per-invocation and doesn't persist or share across instances — fine for a demo, not for
-  anything stateful. Needs a real store (KV/Redis/DB) to behave.
-- **`google-generativeai` is deprecated** in favor of `google-genai`. The code uses the old
-  SDK API, so it runs but prints a deprecation notice on import.
-- **CORS is wide open** (`allow_origins=["*"]`). Harmless once everything's same-origin;
-  tighten it anyway.
-- `npm run lint` flags unused vars that don't affect the build or tests.
-- Unused deps in `package.json`: `framer-motion-3d`, `chart.js`, `react-chartjs-2`.
+- **Persistent state layer.** Move the active-CDM store, agent activity log, catalog cache,
+  and escalation set out of in-memory module globals into a durable store (Vercel KV /
+  Redis / Postgres). This makes ingested conjunctions survive across requests and unlocks
+  multi-operator sessions and historical replay.
+- **Live CDM ingestion from real feeds.** Wire the parser to a real Space-Track / CelesTrak
+  SOCRATES pull on a schedule, so the triage queue runs on genuine daily conjunction data
+  instead of the current fixture set, while keeping the bundled scenarios as a deterministic
+  demo mode.
+- **Full covariance propagation.** Replace the heuristic time-to-TCA covariance scaling with
+  covariance carried directly from the CDM (or propagated via the state-transition matrix),
+  so the B-plane ellipse and Pc reflect the actual reported uncertainty rather than a
+  modeled approximation.
+- **Configurable API base + environments.** Route all frontend calls through `VITE_API_BASE`
+  so local, preview, and prod builds target the right backend cleanly, and lock CORS down to
+  the deployed origin instead of the demo-wide `*`.
+- **Maneuver optimizer.** Move from three preset burns (radial / in-track / cross-track) to a
+  solver that searches Δv direction and magnitude for the minimum-fuel maneuver that drops
+  Pc below the operator's threshold, with a Pareto fuel-vs-risk view.
+- **Hardening pass.** Upgrade the Gemini SDK to `google-genai`, clear the Three.js r168
+  deprecations, trim unused deps, and add CI (lint + Vitest) on every push.
+- ...and continued iteration on the 3D ops console UX based on round-one judge feedback.
